@@ -171,7 +171,7 @@ ghcr.io/<owner>/<repository>:<full-github-sha>
 ghcr.io/<owner>/<repository>:main
 ```
 
-배포는 `publish-image`가 반환한 OCI digest와 전체 Git SHA를 함께 사용합니다. `:main`은 최신 이미지를 확인하기 위한 편의 태그이며 EC2 배포 입력으로 사용하지 않습니다. 이미지 경로는 `${{ github.repository }}`를 기준으로 하므로 저장소 transfer 후 새 조직/저장소 경로로 발행됩니다.
+배포는 `publish-image`가 반환한 OCI digest와 전체 Git SHA를 함께 사용합니다. `:main`은 편의 태그이며, 겹치는 publish 작업 사이에 특정 commit을 가리킨다고 보장하지 않습니다. EC2 배포 입력으로 사용하지 않습니다. 이미지 경로는 `${{ github.repository }}`를 기준으로 하므로 저장소 transfer 후 새 조직/저장소 경로로 발행됩니다.
 
 ### 프로덕션 배포 계약
 

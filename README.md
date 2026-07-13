@@ -162,20 +162,30 @@ feat: 로그인 기능 구현 (#10)
 - CodeRabbit 리뷰는 참고용이며 사람 리뷰를 대체하지 않음
 - PR은 가능하면 파일 5~10개, 코드 200~500줄, 리뷰 30분 이내 규모로 유지
 
-## Docker 이미지와 운영 배포
+## 배포 이미지
 
-GitHub Actions는 PR에서 `lint`, `build`를 검증합니다. `main`에 push되고 검증이
-성공하면 다음 GHCR 이미지를 발행합니다.
+GitHub Actions가 `main` 브랜치에 push되고 CI가 성공하면 다음 GHCR 이미지를 발행합니다.
 
 ```text
 ghcr.io/<repository-owner>/int2-readle-team02-fe:<full-github-sha>
 ghcr.io/<repository-owner>/int2-readle-team02-fe:main
 ```
 
-전체 Git SHA 태그는 배포할 소스 리비전을 식별하고, `:main`은 최신 이미지 확인에
-사용합니다. 운영 EC2는 rootful Podman으로 `readle-public` 네트워크에
-`readle-frontend`를 실행하며 호스트 포트는 직접 노출하지 않습니다. 같은 네트워크의
-Edge Nginx가 외부 요청을 전달합니다.
+배포는 전체 Git SHA 태그로 배포할 소스 리비전을 식별해 선택합니다. `:main`은 최신 이미지를 확인하기 위한 편의 태그이며, EC2는 rootful Podman으로 `readle-public` 네트워크에서 호스트 포트 없이 `readle-frontend`를 실행합니다.
+
+GHCR 패키지는 비공개로 유지합니다. EC2에는 `read:packages`와 해당 패키지 읽기 권한만 가진 전용 자격 증명을 `GHCR_USERNAME`, `GHCR_PULL_TOKEN`으로만 보관하고, 이 저장소에는 저장하지 않습니다.
+
+```bash
+printf '%s' "$GHCR_PULL_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+sudo podman pull ghcr.io/<repository-owner>/int2-readle-team02-fe:<full-github-sha>
+sudo podman run -d --restart=always --name readle-frontend \
+  --network readle-public \
+  ghcr.io/<repository-owner>/int2-readle-team02-fe:<full-github-sha>
+```
+
+같은 `readle-public` 네트워크의 엣지 Nginx 컨테이너가 `/`를 `http://readle-frontend:8080`으로 프록시합니다. 이 저장소는 EC2 배포 자동화나 인증 설정을 제공하지 않습니다.
+
+### 로컬 이미지 확인
 
 로컬에서 배포 이미지 자체를 검증해야 할 때만 Docker를 사용합니다.
 
@@ -184,8 +194,7 @@ docker build -t readle-frontend .
 docker run --rm -p 3000:8080 readle-frontend
 ```
 
-이 실행은 로컬 확인용이며 EC2 배포를 수행하지 않습니다. GHCR 인증 정보는 저장소나
-프론트엔드 코드에 저장하지 않고 운영 서버의 제한된 인증 파일에서만 관리합니다.
+이 실행은 로컬 확인용이며 EC2 배포를 수행하지 않습니다.
 
 ## 운영 주소와 health check
 

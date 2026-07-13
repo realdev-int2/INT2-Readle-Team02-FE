@@ -398,7 +398,7 @@ main() {
   validate_sha "$expected_sha" || die "expected SHA must be 40 lowercase hex characters"
 
   exec 9>"$LOCK_FILE"
-  flock -x 9
+  flock -w 120 -x 9 || die "timed out waiting 120 seconds for deployment lock"
 
   load_state || die "failed to load deployment state"
   remove_stale_candidate

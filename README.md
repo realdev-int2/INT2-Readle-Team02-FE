@@ -171,19 +171,16 @@ ghcr.io/<repository-owner>/int2-readle-team02-fe:<full-github-sha>
 ghcr.io/<repository-owner>/int2-readle-team02-fe:main
 ```
 
-배포는 전체 Git SHA 태그로 배포할 소스 리비전을 식별해 선택합니다. `:main`은 최신 이미지를 확인하기 위한 편의 태그이며, EC2는 rootful Podman으로 `readle-public` 네트워크에서 호스트 포트 없이 `readle-frontend`를 실행합니다.
+배포는 `publish-image`가 반환한 OCI digest와 전체 Git SHA를 함께 사용합니다. `:main`은 최신 이미지를 확인하기 위한 편의 태그일 뿐이며, EC2 배포 입력으로 사용하지 않습니다. EC2는 rootful Podman으로 `readle-public` 네트워크에서 호스트 포트 없이 `readle-frontend`를 실행합니다.
 
 GHCR 패키지는 비공개로 유지합니다. EC2에는 `read:packages`와 해당 패키지 읽기 권한만 가진 전용 자격 증명을 `GHCR_USERNAME`, `GHCR_PULL_TOKEN`으로만 보관하고, 이 저장소에는 저장하지 않습니다.
 
 ```bash
 printf '%s' "$GHCR_PULL_TOKEN" | sudo podman login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-sudo podman pull ghcr.io/<repository-owner>/int2-readle-team02-fe:<full-github-sha>
-sudo podman run -d --restart=always --name readle-frontend \
-  --network readle-public \
-  ghcr.io/<repository-owner>/int2-readle-team02-fe:<full-github-sha>
 ```
 
-같은 `readle-public` 네트워크의 엣지 Nginx 컨테이너가 `/`를 `http://readle-frontend:8080`으로 프록시합니다. 이 저장소는 EC2 배포 자동화나 인증 설정을 제공하지 않습니다.
+반복 가능한 immutable digest 배포와 rollback 절차는 `ops/frontend/README.md`를 따릅니다.
+
 
 ### 로컬 이미지 확인
 
@@ -216,24 +213,36 @@ sudo podman inspect --format '{{.State.Health.Status}}' readle-frontend
 Docker 이미지 자체의 health check는 컨테이너 내부
 `http://127.0.0.1:8080/` 응답을 확인하도록 `Dockerfile`에 정의되어 있습니다.
 
+
+
+
+
+
 ## 미확정 및 확인 필요 사항
-
 아래 항목은 관련 설계 문서 또는 인프라 상태가 확정되면 이 문서에 반영합니다.
-
 - 운영 주소 `http://52.79.230.19/`의 지속 사용 여부와 도메인·HTTPS 적용 계획
 - 프론트엔드에서 사용할 API 목록, 응답 형식, 오류 코드, 인증 방식
 - 운영 환경에서 추가로 필요한 공개 클라이언트 환경 변수
 - EC2 이미지 자동 감지·교체·롤백 운영 절차의 저장소 반영 여부
 - `.github` 이슈/PR 템플릿의 백엔드 전용 문구와 프론트엔드 협업 규칙 통일
-
 2026-07-13 확인 시 현재 작업 환경에서는 운영 주소 연결이 8초 내 성립하지 않았습니다.
 서비스 장애로 단정하지 않으며, EC2 상태·보안 그룹·Edge Nginx를 인프라 담당자와 함께
 확인해야 합니다.
-
 ## 변경 전 검증
-
 ```bash
 npm ci
 npm run lint
 npm run build
 ```
+같은 `readle-public` 네트워크의 엣지 Nginx 컨테이너가 `/`를 `http://readle-frontend:8080`으로 프록시합니다.
+
+## 프로덕션 배포 계약
+
+`publish-image`가 성공한 신뢰된 `main` push만 `production` 환경 배포를 시작합니다. 배포 job은 `contents: read` 권한만 받고, GitHub Environment의 SSH 비밀값으로 EC2의 고정 명령만 실행합니다.
+
+필요한 GitHub `production` 값:
+
+- secrets: `EC2_SSH_PRIVATE_KEY`, `EC2_KNOWN_HOSTS`
+- variables: `EC2_HOST`, `EC2_USER`
+
+호스트 스크립트와 운영 절차는 `ops/frontend/README.md`에 있습니다. EC2에는 GHCR pull 인증, `readle-public` 네트워크, `readle-nginx`, `curl --max-time 5 -fsS http://127.0.0.1/` 성공 상태가 미리 준비되어야 합니다. GitHub-hosted runner에서 pinned `known_hosts`와 전용 SSH key로 접속되는지 확인하는 것이 외부 enablement preflight입니다.

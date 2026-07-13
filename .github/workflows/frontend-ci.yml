@@ -33,7 +33,7 @@ jobs:
       contents: read
       packages: write
     env:
-      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/int2-readle-team02-fe
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -70,7 +70,7 @@ jobs:
     permissions:
       contents: read
     env:
-      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/int2-readle-team02-fe
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
       IMAGE_DIGEST: ${{ needs.publish-image.outputs.digest }}
       EC2_HOST: ${{ vars.EC2_HOST }}
       EC2_USER: ${{ vars.EC2_USER }}

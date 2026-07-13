@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE_PREFIX="ghcr.io/realdev-int2/int2-readle-team02-fe"
+IMAGE_REPOSITORY_FILE="${READLE_FRONTEND_IMAGE_REPOSITORY_FILE:-/etc/readle/frontend-image-repository}"
 LIVE="readle-frontend"
 CANDIDATE="readle-frontend-candidate"
 NETWORK="readle-public"
@@ -17,8 +17,23 @@ validate_sha() {
   [[ "$1" =~ ^[0-9a-f]{40}$ ]]
 }
 
+validate_image_repository() {
+  [[ "$1" =~ ^ghcr[.]io/[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*$ ]]
+}
+
+load_image_prefix() {
+  local prefix extra
+  [[ -r "$IMAGE_REPOSITORY_FILE" ]] || return 1
+  prefix="$(head -n 1 "$IMAGE_REPOSITORY_FILE")"
+  extra="$(tail -n +2 "$IMAGE_REPOSITORY_FILE" | tr -d '[:space:]')"
+  [[ -z "$extra" ]] || return 1
+  validate_image_repository "$prefix" || return 1
+  IMAGE_PREFIX="$prefix"
+}
+
 validate_image_ref() {
-  [[ "$1" =~ ^ghcr[.]io/realdev-int2/int2-readle-team02-fe@sha256:[0-9a-f]{64}$ ]]
+  [[ -n "${IMAGE_PREFIX:-}" && "$1" == "$IMAGE_PREFIX"@sha256:* ]] || return 1
+  [[ "${1#"$IMAGE_PREFIX"@sha256:}" =~ ^[0-9a-f]{64}$ ]]
 }
 
 validate_image_id() {
@@ -273,7 +288,12 @@ restore_image() {
 }
 
 self_test() {
-  local good_sha good_digest good_image_id original_state state_file
+  local good_sha good_digest good_image_id original_repository_file original_state repository_file state_file
+  original_repository_file="$IMAGE_REPOSITORY_FILE"
+  repository_file="$(mktemp)"
+  printf '%s\n' 'ghcr.io/example-org/int2-readle-team02-fe' > "$repository_file"
+  IMAGE_REPOSITORY_FILE="$repository_file"
+  load_image_prefix
   good_sha="0123456789abcdef0123456789abcdef01234567"
   good_digest="${IMAGE_PREFIX}@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   good_image_id="sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -360,11 +380,16 @@ self_test() {
   restore_image "$good_image_id" "$good_sha" "$good_digest"
   [[ "$SELFTEST_PULLED" == "$good_digest" ]]
 
+  rm -f "$repository_file"
+  unset IMAGE_PREFIX
+  IMAGE_REPOSITORY_FILE="$original_repository_file"
   log "self-test passed"
 }
 
 main() {
   [[ "${1:-}" != "--self-test" ]] || { self_test; return; }
+
+  load_image_prefix || die "missing or invalid image repository file: $IMAGE_REPOSITORY_FILE"
 
   local image_ref="${1:-}"
   local expected_sha="${2:-}"

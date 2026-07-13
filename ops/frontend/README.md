@@ -3,7 +3,7 @@
 GitHub Actions deploys only the immutable image digest produced by `publish-image`:
 
 ```text
-ghcr.io/realdev-int2/int2-readle-team02-fe@sha256:<digest> <40-char-git-sha>
+ghcr.io/<owner>/<repository>@sha256:<digest> <40-char-git-sha>
 ```
 
 The host script verifies that digest's `org.opencontainers.image.revision` label equals the SHA before it replaces `readle-frontend`.
@@ -13,7 +13,13 @@ The host script verifies that digest's `org.opencontainers.image.revision` label
 ```bash
 sudo install -d -m 0755 /usr/local/libexec/readle-frontend
 sudo install -m 0755 ops/frontend/deploy-frontend.sh /usr/local/libexec/readle-frontend/deploy-frontend
+sudo install -d -m 0755 /etc/readle
+printf '%s\n' 'ghcr.io/realdev-int2/int2-readle-team02-fe' | \
+  sudo tee /etc/readle/frontend-image-repository >/dev/null
+sudo chmod 0644 /etc/readle/frontend-image-repository
 ```
+
+`/etc/readle/frontend-image-repository` is the host allowlist. On repository transfer, replace its one line with the new `ghcr.io/<owner>/<repository>` value before enabling deployment. The script does not accept image repositories outside this file.
 
 Create a dedicated deploy user/key and allow only this command through sudo. Keep the GHCR pull credential on EC2:
 
@@ -57,7 +63,7 @@ Deploy a pinned image:
 
 ```bash
 sudo /usr/local/libexec/readle-frontend/deploy-frontend \
-  ghcr.io/realdev-int2/int2-readle-team02-fe@sha256:<digest> \
+  ghcr.io/<owner>/<repository>@sha256:<digest> \
   <40-char-git-sha>
 ```
 

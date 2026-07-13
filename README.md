@@ -29,7 +29,7 @@ ghcr.io/<repository-owner>/int2-readle-team02-fe:<full-github-sha>
 ghcr.io/<repository-owner>/int2-readle-team02-fe:main
 ```
 
-배포는 불변인 전체 Git SHA 태그를 사용합니다. `:main`은 최신 이미지를 확인하기 위한 편의 태그이며, EC2는 rootful Podman으로 `readle-public` 네트워크에서 호스트 포트 없이 `readle-frontend`를 실행합니다.
+배포는 전체 Git SHA 태그로 배포할 소스 리비전을 식별해 선택합니다. `:main`은 최신 이미지를 확인하기 위한 편의 태그이며, EC2는 rootful Podman으로 `readle-public` 네트워크에서 호스트 포트 없이 `readle-frontend`를 실행합니다.
 
 GHCR 패키지는 비공개로 유지합니다. EC2에는 `read:packages`와 해당 패키지 읽기 권한만 가진 전용 자격 증명을 `GHCR_USERNAME`, `GHCR_PULL_TOKEN`으로만 보관하고, 이 저장소에는 저장하지 않습니다.
 

@@ -24,7 +24,7 @@ npm run build
 
 GitHub Actions가 `main` 브랜치에 push되고 CI가 성공하면 다음 GHCR 이미지를 발행합니다.
 
-```
+```text
 ghcr.io/<repository-owner>/int2-readle-team02-fe:<full-github-sha>
 ghcr.io/<repository-owner>/int2-readle-team02-fe:main
 ```

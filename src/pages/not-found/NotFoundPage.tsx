@@ -3,11 +3,16 @@ import { ROUTES } from '@/shared/config/routes'
 
 export function NotFoundPage() {
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-50 px-6 text-slate-900">
+    <main className="grid min-h-screen place-items-center bg-surface-canvas px-page-mobile text-text-primary">
       <div className="text-center">
-        <p className="text-sm font-medium text-slate-500">404</p>
-        <h1 className="mt-2 text-2xl font-semibold">페이지를 찾을 수 없습니다.</h1>
-        <Link className="mt-6 inline-block text-blue-600 underline" to={ROUTES.home}>
+        <p className="text-label font-medium text-text-muted">404</p>
+        <h1 className="mt-2 text-heading font-semibold text-text-primary">
+          페이지를 찾을 수 없습니다.
+        </h1>
+        <Link
+          className="mt-6 inline-block rounded-control text-brand-400 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-400"
+          to={ROUTES.home}
+        >
           홈으로 돌아가기
         </Link>
       </div>

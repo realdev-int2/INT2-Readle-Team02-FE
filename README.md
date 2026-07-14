@@ -82,6 +82,28 @@ app → pages → widgets → features → entities → shared
 
 세부 원칙은 [`src/README.md`](src/README.md)를 참고합니다.
 
+## 페이지와 라우팅
+
+PRD, User Flow와 와이어프레임의 MVP 화면을 기준으로 다음 URL 계약을 사용합니다.
+동적 경로의 `:id` 표기는 실제 콘텐츠, 퀴즈, 시도, 결과 식별자로 교체됩니다.
+
+| 화면 | 경로 | 비고 |
+| --- | --- | --- |
+| 로그인 | `/login` | 소셜 로그인 진입 |
+| 홈 / 입력 대시보드 | `/` | URL 또는 텍스트 입력 시작 |
+| 콘텐츠 확인·수정 | `/contents/preview` | 추출 또는 직접 입력 내용 확인 |
+| 학습 준비 | `/contents/:contentId/preparing` | 콘텐츠 검증과 퀴즈 생성 진행 |
+| 퀴즈 풀이 | `/quizzes/:quizId` | 생성된 퀴즈 풀이 |
+| 채점 진행 | `/quiz-attempts/:attemptId/grading` | 제출 답변 채점 진행 |
+| 결과 리포트 | `/result-reports/:reportId` | 점수, 문항별 결과와 피드백 |
+| 학습 현황 | `/dashboard` | 태그 기준 학습 현황 |
+| 히스토리 | `/history` | 완료한 퀴즈와 학습 기록 |
+| 디자인 시스템 | `/design-system` | 개발 환경에서만 제공 |
+
+`AppLayout`은 공통 Header, Navigation, 본문 Container와 본문 바로가기 링크를
+제공합니다. 로그인에서는 인증 전 화면 구조에 맞춰 Navigation만 숨깁니다. 현재 각
+경로의 내용은 후속 도메인 이슈가 독립적으로 교체할 수 있는 최소 placeholder입니다.
+
 ## 프론트엔드와 백엔드 통신 구조
 
 프론트엔드는 백엔드 주소를 컴포넌트마다 직접 작성하지 않고 `/api`로 요청합니다.

@@ -1,10 +1,11 @@
+import { RoutePlaceholderPage } from '@/pages/route-placeholder/RoutePlaceholderPage'
+
 export function HomePage() {
   return (
-    <main className="grid min-h-screen place-items-center bg-surface-canvas px-page-mobile text-text-primary">
-      <div className="text-center">
-        <h1 className="text-title font-semibold text-brand-400">Readle</h1>
-        <p className="mt-2 text-text-secondary">Frontend is ready.</p>
-      </div>
-    </main>
+    <RoutePlaceholderPage
+      description="URL 또는 텍스트로 학습할 콘텐츠를 입력하는 화면이 들어갈 자리입니다."
+      eyebrow="Home"
+      title="홈 / 입력 대시보드"
+    />
   )
 }

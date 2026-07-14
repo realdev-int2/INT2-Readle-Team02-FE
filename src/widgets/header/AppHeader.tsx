@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import readleSymbolUrl from '@/shared/assets/readle-symbol.png'
 import readleWordmarkUrl from '@/shared/assets/readle-wordmark.png'
 import { ROUTES } from '@/shared/config/routes'
 import { PageContainer } from '@/shared/ui'
@@ -11,42 +12,59 @@ interface AppHeaderProps {
 export function AppHeader({ showNavigation = true }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-50 border-b border-border-default bg-surface-canvas/95 backdrop-blur-md">
-      <PageContainer className="flex min-h-14 flex-col justify-center gap-2 py-2 sm:flex-row sm:items-center sm:justify-between sm:py-0">
-        <div className="flex items-center justify-between gap-6">
-          <Link
-            className="w-fit rounded-control focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-400"
-            to={ROUTES.home}
-          >
-            <img
-              alt="Readle"
-              className="h-7 w-auto sm:h-8"
-              height="108"
-              src={readleWordmarkUrl}
-              width="420"
-            />
-          </Link>
-          {showNavigation && <PrimaryNavigation />}
-        </div>
+      <PageContainer className="grid min-h-14 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 py-2 sm:grid-cols-[auto_1fr_auto] sm:gap-x-6 sm:py-0">
+        <Link
+          className="flex w-fit items-center gap-2 rounded-control focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-400"
+          to={ROUTES.home}
+        >
+          <img
+            alt=""
+            aria-hidden="true"
+            className="size-8 rounded-sm"
+            height="172"
+            src={readleSymbolUrl}
+            width="172"
+          />
+          <img
+            alt="Readle"
+            className="h-7 w-auto sm:h-8"
+            height="108"
+            src={readleWordmarkUrl}
+            width="420"
+          />
+        </Link>
         {showNavigation && (
-          <div
-            aria-label="사용자 프로필"
-            className="flex items-center gap-2 self-end rounded-control px-3 py-2 text-label text-text-muted sm:self-auto"
-          >
-            <svg
-              aria-hidden="true"
-              className="size-4"
-              fill="none"
-              viewBox="0 0 24 24"
+          <div className="col-span-2 row-start-2 sm:col-span-1 sm:row-start-auto">
+            <PrimaryNavigation />
+          </div>
+        )}
+        {showNavigation && (
+          <div className="flex items-center gap-2">
+            <Link
+              aria-label="새 퀴즈 만들기"
+              className="flex min-h-9 items-center gap-1.5 rounded-control bg-brand-500 px-3 text-label font-semibold text-text-on-brand shadow-button transition-colors hover:bg-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+              to={ROUTES.home}
             >
-              <path
-                d="M20 21a8 8 0 0 0-16 0M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.5"
-              />
-            </svg>
-            <span>프로필</span>
+              <span aria-hidden="true" className="text-section leading-none">
+                +
+              </span>
+              <span className="hidden md:inline">새 퀴즈</span>
+            </Link>
+            <div
+              aria-label="전성 프로필"
+              className="flex min-h-9 items-center gap-2 rounded-control px-1 text-label text-text-secondary sm:px-2"
+            >
+              <span
+                aria-hidden="true"
+                className="grid size-8 place-items-center rounded-full border border-brand-400/30 bg-brand-500/15 text-caption font-bold text-brand-400"
+              >
+                전
+              </span>
+              <span className="hidden font-medium md:inline">전성</span>
+              <span aria-hidden="true" className="hidden text-caption text-text-muted md:inline">
+                ▼
+              </span>
+            </div>
           </div>
         )}
       </PageContainer>

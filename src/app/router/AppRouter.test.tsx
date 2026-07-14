@@ -50,11 +50,20 @@ describe('AppRouter', () => {
     expect(html).not.toContain('>히스토리</a>')
   })
 
-  it('일반 페이지 헤더에 프로필 영역을 표시한다', () => {
+  it('일반 페이지 헤더에 새 퀴즈 CTA와 사용자 프로필 영역을 표시한다', () => {
     const html = renderRoute('/')
 
-    expect(html).toContain('aria-label="사용자 프로필"')
-    expect(html).toContain('>프로필</span>')
+    expect(html).toContain('aria-label="새 퀴즈 만들기"')
+    expect(html).toContain('>새 퀴즈</span>')
+    expect(html).toContain('aria-label="전성 프로필"')
+    expect(html).toContain('>전성</span>')
+  })
+
+  it('공통 헤더에 책 심볼과 Readle 워드마크를 표시한다', () => {
+    const html = renderRoute('/')
+
+    expect(html.match(/<img/g)).toHaveLength(2)
+    expect(html).toContain('alt="Readle"')
   })
 
   it('정의되지 않은 경로에서 404 페이지를 렌더링한다', () => {

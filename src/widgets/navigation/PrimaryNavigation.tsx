@@ -4,7 +4,6 @@ import { ROUTES } from '@/shared/config/routes'
 const navigationItems = [
   { label: '홈', to: ROUTES.home },
   { label: '학습 현황', to: ROUTES.dashboard },
-  { label: '히스토리', to: ROUTES.history },
 ] as const
 
 export function PrimaryNavigation() {

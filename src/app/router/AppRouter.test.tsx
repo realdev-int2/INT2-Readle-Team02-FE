@@ -31,7 +31,7 @@ describe('AppRouter', () => {
   it('로그인 경로에서는 공통 헤더를 유지하고 주요 메뉴를 숨긴다', () => {
     const html = renderRoute('/login')
 
-    expect(html).toContain('>Readle</a>')
+    expect(html).toContain('alt="Readle"')
     expect(html).toContain('>로그인</h1>')
     expect(html).not.toContain('aria-label="주요 메뉴"')
   })
@@ -41,6 +41,20 @@ describe('AppRouter', () => {
 
     expect(html).toContain('aria-current="page"')
     expect(html).toContain('>학습 현황</a>')
+  })
+
+  it('히스토리는 직접 접근 경로로 유지하되 주요 메뉴에서는 제외한다', () => {
+    const html = renderRoute('/history')
+
+    expect(html).toContain('학습 히스토리')
+    expect(html).not.toContain('>히스토리</a>')
+  })
+
+  it('일반 페이지 헤더에 프로필 영역을 표시한다', () => {
+    const html = renderRoute('/')
+
+    expect(html).toContain('aria-label="사용자 프로필"')
+    expect(html).toContain('>프로필</span>')
   })
 
   it('정의되지 않은 경로에서 404 페이지를 렌더링한다', () => {

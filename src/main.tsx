@@ -8,11 +8,15 @@ async function enableMocking() {
     return
   }
 
-  const { worker } = await import('@/mocks/browser')
+  try {
+    const { worker } = await import('@/mocks/browser')
 
-  await worker.start({
-    onUnhandledRequest: 'bypass',
-  })
+    await worker.start({
+      onUnhandledRequest: 'bypass',
+    })
+  } catch (error) {
+    console.error('[MSW] Mocking initialization failed.', error)
+  }
 }
 
 async function bootstrap() {
@@ -25,4 +29,6 @@ async function bootstrap() {
   )
 }
 
-void bootstrap()
+void bootstrap().catch((error) => {
+  console.error('[App] Bootstrap failed.', error)
+})

@@ -3,7 +3,7 @@ import { ROUTES } from '@/shared/config/routes'
 
 export function NotFoundPage() {
   return (
-    <main className="grid min-h-screen place-items-center bg-surface-canvas px-page-mobile text-text-primary">
+    <section className="grid min-h-[calc(100vh-7.5rem)] place-items-center py-12 text-text-primary sm:min-h-[calc(100vh-3.5rem)]">
       <div className="text-center">
         <p className="text-label font-medium text-text-muted">404</p>
         <h1 className="mt-2 text-heading font-semibold text-text-primary">
@@ -16,6 +16,6 @@ export function NotFoundPage() {
           홈으로 돌아가기
         </Link>
       </div>
-    </main>
+    </section>
   )
 }

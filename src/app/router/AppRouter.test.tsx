@@ -56,7 +56,7 @@ describe('AppRouter', () => {
     expect(html).toContain('aria-label="새 퀴즈 만들기"')
     expect(html).toContain('>새 퀴즈</span>')
     expect(html).toContain('aria-label="전성 프로필"')
-    expect(html).toContain('>전성</span>')
+    expect(html).not.toContain('>전성</span>')
   })
 
   it('공통 헤더에 책 심볼과 Readle 워드마크를 표시한다', () => {

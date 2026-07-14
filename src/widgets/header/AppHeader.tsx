@@ -27,7 +27,7 @@ export function AppHeader({ showNavigation = true }: AppHeaderProps) {
           />
           <img
             alt="Readle"
-            className="h-7 w-auto sm:h-8"
+            className="h-6.5 w-auto sm:h-7"
             height="108"
             src={readleWordmarkUrl}
             width="420"
@@ -52,17 +52,15 @@ export function AppHeader({ showNavigation = true }: AppHeaderProps) {
             </Link>
             <div
               aria-label="전성 프로필"
-              className="flex min-h-9 items-center gap-2 rounded-control px-1 text-label text-text-secondary sm:px-2"
+              className="grid min-h-9 place-items-center rounded-control px-1"
             >
               <span
                 aria-hidden="true"
                 className="grid size-8 place-items-center rounded-full border border-brand-400/30 bg-brand-500/15 text-caption font-bold text-brand-400"
               >
-                전
-              </span>
-              <span className="hidden font-medium md:inline">전성</span>
-              <span aria-hidden="true" className="hidden text-caption text-text-muted md:inline">
-                ▼
+                <svg className="size-4.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v2h16v-2c0-2.76-3.58-5-8-5Z" />
+                </svg>
               </span>
             </div>
           </div>

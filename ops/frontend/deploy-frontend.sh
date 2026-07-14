@@ -290,13 +290,18 @@ restore_image() {
 self_test() {
   local good_sha good_digest good_image_id raw_good_image_id lock_probe original_repository_file original_state repository_file state_file
 
-  lock_probe="$(mktemp)"
-  exec 9>"$lock_probe"
-  podman() { bash -c 'test ! -e /dev/fd/9'; }
-  podman_cmd self-test
-  exec 9>&-
-  unset -f podman
-  rm -f "$lock_probe"
+  (
+    lock_probe="$(mktemp)"
+    trap 'status=$?; exec 9>&-; unset -f podman; rm -f "$lock_probe"; exit "$status"' EXIT
+    exec 9>"$lock_probe"
+    podman() {
+      if { : >&9; } 2>/dev/null; then
+        return 1
+      fi
+      return 0
+    }
+    podman_cmd self-test
+  )
 
   original_repository_file="$IMAGE_REPOSITORY_FILE"
   repository_file="$(mktemp)"
@@ -359,6 +364,7 @@ self_test() {
     'pending_rollback_revision=' \
     'pending_rollback_ref=' > "$STATE_FILE"
   load_state
+  [[ "$last_good_image" == "$raw_good_image_id" ]]
   printf '%s\n' \
     'last_good_image=not-an-image' \
     "last_good_revision=$good_sha" \

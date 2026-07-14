@@ -1,5 +1,6 @@
 export const ROUTES = {
-  home: '/',
+  landing: '/',
+  home: '/learn',
   login: '/login',
   contentPreview: '/contents/preview',
   learningPreparation: '/contents/:contentId/preparing',

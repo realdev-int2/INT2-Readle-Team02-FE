@@ -37,7 +37,7 @@ validate_image_ref() {
 }
 
 validate_image_id() {
-  [[ "$1" =~ ^sha256:[0-9a-f]{64}$ ]]
+  [[ "$1" =~ ^(sha256:)?[0-9a-f]{64}$ ]]
 }
 
 validate_optional_image_id() {
@@ -138,7 +138,7 @@ load_state() {
 }
 
 podman_cmd() {
-  podman "$@"
+  9>&- podman "$@"
 }
 
 container_exists() {
@@ -288,7 +288,16 @@ restore_image() {
 }
 
 self_test() {
-  local good_sha good_digest good_image_id original_repository_file original_state repository_file state_file
+  local good_sha good_digest good_image_id raw_good_image_id lock_probe original_repository_file original_state repository_file state_file
+
+  lock_probe="$(mktemp)"
+  exec 9>"$lock_probe"
+  podman() { bash -c 'test ! -e /dev/fd/9'; }
+  podman_cmd self-test
+  exec 9>&-
+  unset -f podman
+  rm -f "$lock_probe"
+
   original_repository_file="$IMAGE_REPOSITORY_FILE"
   repository_file="$(mktemp)"
   printf '%s\n' 'ghcr.io/example-org/int2-readle-team02-fe' > "$repository_file"
@@ -297,6 +306,7 @@ self_test() {
   good_sha="0123456789abcdef0123456789abcdef01234567"
   good_digest="${IMAGE_PREFIX}@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   good_image_id="sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  raw_good_image_id="${good_image_id#sha256:}"
 
   validate_sha "$good_sha"
   ! validate_sha "0123"
@@ -342,7 +352,7 @@ self_test() {
   state_file="$(mktemp)"
   STATE_FILE="$state_file"
   printf '%s\n' \
-    "last_good_image=$good_image_id" \
+    "last_good_image=$raw_good_image_id" \
     "last_good_revision=$good_sha" \
     "last_good_ref=$good_digest" \
     'pending_rollback_image=' \

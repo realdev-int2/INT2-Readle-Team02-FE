@@ -3,6 +3,7 @@ import { AppLayout } from '@/app/layouts/AppLayout'
 import { DesignSystemPage } from '@/pages/design-system/DesignSystemPage'
 import { HomePage } from '@/pages/home/HomePage'
 import { LandingPage } from '@/pages/landing/LandingPage'
+import { LearningPreparationPage } from '@/pages/learning-preparation/LearningPreparationPage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import { RoutePlaceholderPage } from '@/pages/route-placeholder/RoutePlaceholderPage'
 import { ROUTES } from '@/shared/config/routes'
@@ -29,13 +30,7 @@ export function AppRouter() {
         />
         <Route
           path={ROUTES.learningPreparation}
-          element={
-            <RoutePlaceholderPage
-              description="콘텐츠 검증과 퀴즈 생성 진행 상태를 안내하는 화면이 들어갈 자리입니다."
-              eyebrow="Preparation"
-              title="퀴즈 준비"
-            />
-          }
+          element={<LearningPreparationPage />}
         />
         <Route
           path={ROUTES.quiz}

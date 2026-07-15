@@ -1,0 +1,174 @@
+.learn-page {
+  position: relative;
+}
+
+.learn-page::before {
+  position: absolute;
+  z-index: 0;
+  top: 2rem;
+  left: 50%;
+  width: min(56rem, 90vw);
+  height: 24rem;
+  border-radius: 9999px;
+  background: rgb(76 131 255 / 0.07);
+  filter: blur(6rem);
+  transform: translateX(-50%);
+  content: '';
+  pointer-events: none;
+}
+
+.learn-page > section {
+  position: relative;
+  z-index: 1;
+}
+
+.learn-composer {
+  border: 1px solid var(--color-border-strong);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  background: rgb(21 27 38 / 0.8);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(1rem);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.learn-composer:focus-within {
+  border-color: rgb(107 150 255 / 0.62);
+  box-shadow: var(--shadow-card), 0 0 0 0.25rem rgb(76 131 255 / 0.09);
+}
+
+.learn-composer-input,
+.learn-composer-title,
+.learn-composer-textarea {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.learn-composer-input {
+  min-height: 5rem;
+  font-size: 1.125rem;
+}
+
+.learn-composer-title {
+  min-height: 2.75rem;
+  border-bottom: 1px solid var(--color-border-glass);
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+
+.learn-composer-textarea {
+  min-height: 10rem;
+  resize: vertical;
+  padding-top: 1rem;
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+
+.learn-composer-input::placeholder,
+.learn-composer-title::placeholder,
+.learn-composer-textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.learn-method-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-control);
+  padding: 0.25rem;
+  background: rgb(11 16 24 / 0.65);
+}
+
+.learn-method-tab {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 0.2rem);
+  padding: 0.45rem 0.85rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-label);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.learn-method-tab:hover {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-secondary);
+}
+
+.learn-method-tab:focus-visible {
+  outline: 2px solid var(--color-brand-400);
+  outline-offset: 2px;
+}
+
+.learn-method-tab-active {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  box-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 0.2);
+}
+
+.learn-submit-button {
+  display: inline-flex;
+  min-height: 2.625rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  padding: 0.6rem 1rem;
+  background: var(--color-brand-500);
+  color: var(--color-text-on-brand);
+  font-size: var(--text-label);
+  font-weight: 700;
+  box-shadow: var(--shadow-button);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+
+.learn-submit-button:hover:not(:disabled) {
+  background: var(--color-brand-600);
+  transform: translateY(-0.1rem);
+}
+
+.learn-submit-button:focus-visible {
+  outline: 2px solid var(--color-brand-400);
+  outline-offset: 3px;
+}
+
+.learn-submit-button:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+@media (max-width: 39.999rem) {
+  .learn-method-tabs,
+  .learn-submit-button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-composer,
+  .learn-method-tab,
+  .learn-submit-button {
+    transition: none;
+  }
+}

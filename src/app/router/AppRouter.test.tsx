@@ -13,9 +13,9 @@ function renderRoute(path: string) {
 
 describe('AppRouter', () => {
   it.each([
-    ['/learn', '홈 / 입력 대시보드'],
+    ['/learn', '새 학습 만들기'],
     ['/contents/preview', '콘텐츠 확인 · 수정'],
-    ['/contents/101/preparing', '퀴즈 준비'],
+    ['/contents/101/preparing', '퀴즈를 만들고 있습니다'],
     ['/quizzes/201', '퀴즈 풀이'],
     ['/quiz-attempts/301/grading', '답변 확인'],
     ['/result-reports/401', '결과 리포트'],

@@ -13,7 +13,7 @@ function renderRoute(path: string) {
 
 describe('AppRouter', () => {
   it.each([
-    ['/', '홈 / 입력 대시보드'],
+    ['/learn', '홈 / 입력 대시보드'],
     ['/contents/preview', '콘텐츠 확인 · 수정'],
     ['/contents/101/preparing', '퀴즈 준비'],
     ['/quizzes/201', '퀴즈 풀이'],
@@ -28,12 +28,24 @@ describe('AppRouter', () => {
     expect(html).toContain('aria-label="주요 메뉴"')
   })
 
-  it('로그인 경로에서는 공통 헤더를 유지하고 주요 메뉴를 숨긴다', () => {
+  it('랜딩 경로에서 서비스 소개를 렌더링한다', () => {
+    const html = renderRoute('/')
+
+    expect(html).toContain('설명할 수 있는 지식으로.')
+    expect(html).toContain('aria-label="랜딩 페이지 메뉴"')
+    expect(html).not.toContain('aria-label="주요 메뉴"')
+  })
+
+  it('로그인 경로에서는 앱 헤더 없이 랜딩 위 로그인 모달을 표시한다', () => {
     const html = renderRoute('/login')
 
     expect(html).toContain('alt="Readle"')
-    expect(html).toContain('>로그인</h1>')
+    expect(html).toContain('role="dialog"')
+    expect(html).toContain('Google로 시작하기')
+    expect(html).toContain('카카오로 시작하기')
     expect(html).not.toContain('aria-label="주요 메뉴"')
+    expect(html).not.toContain('aria-label="새 퀴즈 만들기"')
+    expect(html).not.toContain('aria-label="전성 프로필"')
   })
 
   it('현재 주요 메뉴를 aria-current로 표시한다', () => {
@@ -51,7 +63,7 @@ describe('AppRouter', () => {
   })
 
   it('일반 페이지 헤더에 새 퀴즈 CTA와 사용자 프로필 영역을 표시한다', () => {
-    const html = renderRoute('/')
+    const html = renderRoute('/learn')
 
     expect(html).toContain('aria-label="새 퀴즈 만들기"')
     expect(html).toContain('>새 퀴즈</span>')
@@ -60,7 +72,7 @@ describe('AppRouter', () => {
   })
 
   it('공통 헤더에 책 심볼과 Readle 워드마크를 표시한다', () => {
-    const html = renderRoute('/')
+    const html = renderRoute('/learn')
 
     expect(html.match(/<img/g)).toHaveLength(2)
     expect(html).toContain('alt="Readle"')

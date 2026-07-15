@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router'
 import { AppLayout } from '@/app/layouts/AppLayout'
 import { DesignSystemPage } from '@/pages/design-system/DesignSystemPage'
 import { HomePage } from '@/pages/home/HomePage'
+import { LandingPage } from '@/pages/landing/LandingPage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import { RoutePlaceholderPage } from '@/pages/route-placeholder/RoutePlaceholderPage'
 import { ROUTES } from '@/shared/config/routes'
@@ -12,18 +13,8 @@ export function AppRouter() {
       {import.meta.env.DEV && (
         <Route path={ROUTES.designSystem} element={<DesignSystemPage />} />
       )}
-      <Route element={<AppLayout showNavigation={false} />}>
-        <Route
-          path={ROUTES.login}
-          element={
-            <RoutePlaceholderPage
-              description="소셜 로그인 화면이 들어갈 자리입니다."
-              eyebrow="Authentication"
-              title="로그인"
-            />
-          }
-        />
-      </Route>
+      <Route path={ROUTES.landing} element={<LandingPage key="landing" />} />
+      <Route path={ROUTES.login} element={<LandingPage initialLoginOpen key="login" />} />
       <Route element={<AppLayout />}>
         <Route path={ROUTES.home} element={<HomePage />} />
         <Route

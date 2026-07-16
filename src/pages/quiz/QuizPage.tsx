@@ -194,12 +194,13 @@ export function QuizPage() {
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [notice, setNotice] = useState<string>()
 
-  const question = mockQuiz.questions[currentIndex]
-  const answeredCount = getAnsweredCount(mockQuiz.questions, answers)
-  const unansweredCount = mockQuiz.questionCount - answeredCount
-  const isLastQuestion = currentIndex === mockQuiz.questionCount - 1
+  const quiz = mockQuiz
+  const question = quiz.questions[currentIndex]
+  const answeredCount = getAnsweredCount(quiz.questions, answers)
+  const unansweredCount = quiz.questionCount - answeredCount
+  const isLastQuestion = currentIndex === quiz.questionCount - 1
   const isCodeQuestion = question.type === 'code_blank'
-  const progress = ((currentIndex + 1) / mockQuiz.questionCount) * 100
+  const progress = ((currentIndex + 1) / quiz.questionCount) * 100
 
   function updateAnswer(answer: QuizAnswer) {
     setAnswers((current) => ({ ...current, [question.questionId]: answer }))
@@ -212,11 +213,14 @@ export function QuizPage() {
   }
 
   function requestSubmit() {
-    const firstUnansweredIndex = getFirstUnansweredIndex(mockQuiz.questions, answers)
+    const firstUnansweredIndex = getFirstUnansweredIndex(quiz.questions, answers)
 
     if (firstUnansweredIndex >= 0) {
+      const currentAnsweredCount = getAnsweredCount(quiz.questions, answers)
+      const currentUnansweredCount = quiz.questionCount - currentAnsweredCount
+
       setCurrentIndex(firstUnansweredIndex)
-      setNotice(`아직 답하지 않은 문제가 ${unansweredCount}개 있습니다.`)
+      setNotice(`아직 답하지 않은 문제가 ${currentUnansweredCount}개 있습니다.`)
       return
     }
 
@@ -232,21 +236,21 @@ export function QuizPage() {
     <div className="quiz-page py-8 sm:py-10 lg:py-12">
       <header className="quiz-header">
         <div className="min-w-0">
-          <h1 className="truncate text-heading font-bold text-text-primary sm:text-title">{mockQuiz.title}</h1>
+          <h1 className="truncate text-heading font-bold text-text-primary sm:text-title">{quiz.title}</h1>
           <div className="mt-3 flex flex-wrap gap-2" aria-label="퀴즈 태그">
-            {mockQuiz.tags.map((tag) => <span className="quiz-tag" key={tag}>#{tag}</span>)}
+            {quiz.tags.map((tag) => <span className="quiz-tag" key={tag}>#{tag}</span>)}
           </div>
         </div>
         <div className="quiz-progress-summary">
           <strong>{currentIndex + 1}</strong>
-          <span>/ {mockQuiz.questionCount}</span>
+          <span>/ {quiz.questionCount}</span>
           <small>문제 풀이 중</small>
         </div>
       </header>
 
       <div className="quiz-progress-row mt-6" aria-label={`문제 진행률 ${Math.round(progress)}%`}>
         <div className="quiz-progress-segments" aria-hidden="true">
-          {mockQuiz.questions.map((item, index) => (
+          {quiz.questions.map((item, index) => (
             <span className={index <= currentIndex ? 'quiz-progress-segment-filled' : ''} key={item.questionId} />
           ))}
         </div>
@@ -257,10 +261,10 @@ export function QuizPage() {
         <aside className="quiz-navigator" aria-label="문제 바로가기">
           <div className="quiz-navigator-heading">
             <span>문제 목록</span>
-            <strong>{answeredCount}/{mockQuiz.questionCount} 완료</strong>
+            <strong>{answeredCount}/{quiz.questionCount} 완료</strong>
           </div>
           <ol className="quiz-question-list">
-            {mockQuiz.questions.map((item, index) => {
+            {quiz.questions.map((item, index) => {
               const active = index === currentIndex
               const answered = isAnswered(answers[item.questionId])
 

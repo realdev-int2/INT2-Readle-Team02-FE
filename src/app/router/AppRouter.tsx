@@ -7,6 +7,7 @@ import { LandingPage } from '@/pages/landing/LandingPage'
 import { LearningPreparationPage } from '@/pages/learning-preparation/LearningPreparationPage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import { QuizPage } from '@/pages/quiz/QuizPage'
+import { ResultReportPage } from '@/pages/result-report/ResultReportPage'
 import { RoutePlaceholderPage } from '@/pages/route-placeholder/RoutePlaceholderPage'
 import { ROUTES } from '@/shared/config/routes'
 
@@ -44,13 +45,7 @@ export function AppRouter() {
         />
         <Route
           path={ROUTES.resultReport}
-          element={
-            <RoutePlaceholderPage
-              description="점수와 문제별 풀이 결과, 오답 피드백을 확인하는 화면이 들어갈 자리입니다."
-              eyebrow="Result"
-              title="결과 리포트"
-            />
-          }
+          element={<ResultReportPage />}
         />
         <Route
           path={ROUTES.dashboard}

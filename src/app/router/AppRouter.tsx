@@ -5,6 +5,7 @@ import { HomePage } from '@/pages/home/HomePage'
 import { LandingPage } from '@/pages/landing/LandingPage'
 import { LearningPreparationPage } from '@/pages/learning-preparation/LearningPreparationPage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
+import { QuizPage } from '@/pages/quiz/QuizPage'
 import { RoutePlaceholderPage } from '@/pages/route-placeholder/RoutePlaceholderPage'
 import { ROUTES } from '@/shared/config/routes'
 
@@ -34,13 +35,7 @@ export function AppRouter() {
         />
         <Route
           path={ROUTES.quiz}
-          element={
-            <RoutePlaceholderPage
-              description="생성된 문제를 순서대로 풀이하는 화면이 들어갈 자리입니다."
-              eyebrow="Quiz"
-              title="퀴즈 풀이"
-            />
-          }
+          element={<QuizPage />}
         />
         <Route
           path={ROUTES.grading}

@@ -17,7 +17,7 @@ describe('AppRouter', () => {
     ['/contents/preview', '콘텐츠 확인 · 수정'],
     ['/contents/101/preparing', '퀴즈를 만들고 있습니다'],
     ['/quizzes/201', 'Spring @Transactional 심층 이해'],
-    ['/quiz-attempts/301/grading', '답변 확인'],
+    ['/quiz-attempts/301/grading', '답안을 채점하고 있습니다'],
     ['/result-reports/401', '결과 리포트'],
     ['/dashboard', '학습 현황 대시보드'],
     ['/history', '학습 히스토리'],

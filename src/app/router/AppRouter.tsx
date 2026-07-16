@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router'
 import { AppLayout } from '@/app/layouts/AppLayout'
 import { DesignSystemPage } from '@/pages/design-system/DesignSystemPage'
+import { GradingPage } from '@/pages/grading/GradingPage'
 import { HomePage } from '@/pages/home/HomePage'
 import { LandingPage } from '@/pages/landing/LandingPage'
 import { LearningPreparationPage } from '@/pages/learning-preparation/LearningPreparationPage'
@@ -39,13 +40,7 @@ export function AppRouter() {
         />
         <Route
           path={ROUTES.grading}
-          element={
-            <RoutePlaceholderPage
-              description="제출한 답변의 채점 진행 상태를 안내하는 화면이 들어갈 자리입니다."
-              eyebrow="Grading"
-              title="답변 확인"
-            />
-          }
+          element={<GradingPage />}
         />
         <Route
           path={ROUTES.resultReport}

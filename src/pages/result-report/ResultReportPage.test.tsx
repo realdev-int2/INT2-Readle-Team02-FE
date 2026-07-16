@@ -36,6 +36,14 @@ describe('ResultReportPage', () => {
   ])('%s Mock 상태를 렌더링한다', (state, copy) => {
     expect(renderPage(`/result-reports/mock-report?mock=${state}`)).toContain(copy)
   })
+
+  it('알 수 없는 Mock 상태는 기본 결과 리포트로 처리한다', () => {
+    const html = renderPage('/result-reports/mock-report?mock=unknown')
+
+    expect(html).toContain('Spring @Transactional 심층 이해')
+    expect(html).not.toContain('REPORT_NOT_FOUND')
+    expect(html).not.toContain('FORBIDDEN')
+  })
 })
 
 describe('result report model', () => {

@@ -13,6 +13,18 @@ import '@/pages/result-report/ResultReportPage.css'
 
 type ReportMockState = 'ready' | 'loading' | 'not-ready' | 'not-found' | 'forbidden'
 
+function parseReportMockState(value: string | null): ReportMockState {
+  switch (value) {
+    case 'loading':
+    case 'not-ready':
+    case 'not-found':
+    case 'forbidden':
+      return value
+    default:
+      return 'ready'
+  }
+}
+
 function QuestionResultItem({ result }: { result: QuestionResult }) {
   return (
     <details className={`result-question ${result.isCorrect ? 'result-question-correct' : 'result-question-incorrect'}`}>
@@ -91,7 +103,7 @@ function ReportErrorState({ state }: { state: Exclude<ReportMockState, 'ready' |
 
 export function ResultReportPage() {
   const [searchParams] = useSearchParams()
-  const mockState = (searchParams.get('mock') ?? 'ready') as ReportMockState
+  const mockState = parseReportMockState(searchParams.get('mock'))
 
   if (mockState === 'loading') return <ReportLoadingState />
   if (mockState !== 'ready') return <ReportErrorState state={mockState} />

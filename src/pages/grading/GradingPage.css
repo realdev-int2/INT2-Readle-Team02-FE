@@ -329,7 +329,7 @@
   }
 
   .grading-step small {
-    display: none;
+    grid-column: 2;
   }
 
   .grading-footer > button,

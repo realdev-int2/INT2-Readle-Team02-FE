@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { generatePath, Link, useSearchParams } from 'react-router'
+import { generatePath, Link, useParams, useSearchParams } from 'react-router'
 import { ROUTES } from '@/shared/config/routes'
 import { Button } from '@/shared/ui'
 import '@/pages/grading/GradingPage.css'
@@ -14,7 +14,17 @@ const gradingSteps = [
   { description: '문제별 결과와 피드백을 정리합니다.', label: '결과 리포트 준비' },
 ] as const
 
+interface GradingFlowProps {
+  attemptId: string
+}
+
 export function GradingPage() {
+  const { attemptId = '' } = useParams<{ attemptId: string }>()
+
+  return <GradingFlow attemptId={attemptId} key={attemptId} />
+}
+
+function GradingFlow({ attemptId }: GradingFlowProps) {
   const [searchParams] = useSearchParams()
   const [activeStage, setActiveStage] = useState(0)
   const [attemptNumber, setAttemptNumber] = useState(0)
@@ -40,7 +50,7 @@ export function GradingPage() {
     )
 
     return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [attemptNumber, shouldFailFirstAttempt])
+  }, [attemptId, attemptNumber, shouldFailFirstAttempt])
 
   function retryGrading() {
     setActiveStage(0)

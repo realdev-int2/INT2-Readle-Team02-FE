@@ -18,8 +18,9 @@ describe('QuizPage', () => {
     )
 
     expect(html).toContain('Spring @Transactional 심층 이해')
-    expect(html).toContain('ACTIVE RECALL SESSION')
     expect(html).toContain('QUESTION 01')
+    expect(html).toContain('문제 진행률 20%')
+    expect(html).not.toContain('readle.app')
     expect(html).toContain('객관식')
     expect(html).toContain('문제 목록')
     expect(html).toContain('다음 문제')

@@ -1,0 +1,349 @@
+.grading-page {
+  position: relative;
+  min-height: calc(100vh - 4rem);
+  overflow: hidden;
+}
+
+.grading-page::before {
+  position: absolute;
+  top: 2rem;
+  left: 50%;
+  width: min(48rem, 86vw);
+  height: 28rem;
+  border-radius: 9999px;
+  background: rgb(76 131 255 / 0.075);
+  filter: blur(6rem);
+  transform: translateX(-50%);
+  content: '';
+  pointer-events: none;
+}
+
+.grading-page-error::before {
+  background: rgb(251 113 133 / 0.055);
+}
+
+.grading-page > section {
+  position: relative;
+  z-index: 1;
+}
+
+.grading-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.grading-status-badge {
+  flex: 0 0 auto;
+  border: 1px solid rgb(107 150 255 / 0.28);
+  border-radius: 9999px;
+  padding: 0.4rem 0.7rem;
+  background: rgb(76 131 255 / 0.08);
+  color: var(--color-brand-400);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.grading-page-success .grading-status-badge {
+  border-color: rgb(52 211 153 / 0.28);
+  background: rgb(52 211 153 / 0.08);
+  color: var(--color-status-success);
+}
+
+.grading-page-error .grading-status-badge {
+  border-color: rgb(251 113 133 / 0.28);
+  background: rgb(251 113 133 / 0.08);
+  color: var(--color-status-error);
+}
+
+.grading-panel {
+  display: grid;
+  grid-template-columns: minmax(17rem, 0.78fr) minmax(0, 1.22fr);
+  overflow: hidden;
+  border: 1px solid var(--color-border-glass);
+  border-radius: 1.25rem;
+  background: rgb(21 27 38 / 0.72);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(1rem);
+}
+
+.grading-progress-column {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border-right: 1px solid var(--color-border-glass);
+  padding: 2rem;
+  background:
+    radial-gradient(circle at 50% 40%, rgb(76 131 255 / 0.1), transparent 11rem),
+    rgb(11 16 24 / 0.34);
+}
+
+.grading-progress-ring {
+  display: grid;
+  width: 11.5rem;
+  height: 11.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--color-brand-500) var(--grading-progress), var(--color-border-default) 0);
+  box-shadow: 0 0 2.5rem rgb(76 131 255 / 0.12);
+  transition: background 450ms ease;
+}
+
+.grading-page-success .grading-progress-ring {
+  background: conic-gradient(var(--color-status-success) var(--grading-progress), var(--color-border-default) 0);
+}
+
+.grading-page-error .grading-progress-ring {
+  background: conic-gradient(var(--color-status-error) var(--grading-progress), var(--color-border-default) 0);
+}
+
+.grading-progress-ring-inner {
+  display: grid;
+  width: 9.6rem;
+  height: 9.6rem;
+  place-items: center;
+  align-content: center;
+  border: 1px solid var(--color-border-glass);
+  border-radius: 50%;
+  background: var(--color-surface-canvas);
+}
+
+.grading-progress-ring-inner strong {
+  color: var(--color-text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 2rem;
+}
+
+.grading-progress-ring-inner span {
+  margin-top: 0.1rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+}
+
+.grading-current-message {
+  min-height: 2.5rem;
+  max-width: 18rem;
+  margin: 1.5rem 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+.grading-step-list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 1.25rem;
+  list-style: none;
+}
+
+.grading-step {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  min-height: 4.5rem;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  padding: 0.7rem 0.85rem;
+  color: var(--color-text-muted);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.grading-step-active {
+  border-color: rgb(107 150 255 / 0.32);
+  background: rgb(76 131 255 / 0.08);
+}
+
+.grading-step-error {
+  border-color: rgb(251 113 133 / 0.28);
+  background: rgb(251 113 133 / 0.07);
+}
+
+.grading-step-marker {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 1px solid var(--color-border-default);
+  border-radius: 50%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.625rem;
+  font-weight: 700;
+}
+
+.grading-step-active .grading-step-marker {
+  border-color: var(--color-brand-400);
+  color: var(--color-brand-400);
+  box-shadow: 0 0 1rem rgb(76 131 255 / 0.2);
+  animation: grading-pulse 1.2s ease-in-out infinite;
+}
+
+.grading-step-complete .grading-step-marker {
+  border-color: rgb(52 211 153 / 0.35);
+  color: var(--color-status-success);
+}
+
+.grading-step-error .grading-step-marker {
+  border-color: rgb(251 113 133 / 0.4);
+  color: var(--color-status-error);
+}
+
+.grading-step strong,
+.grading-step span span {
+  display: block;
+}
+
+.grading-step strong {
+  color: var(--color-text-secondary);
+  font-size: var(--text-label);
+}
+
+.grading-step-active strong,
+.grading-step-complete strong {
+  color: var(--color-text-primary);
+}
+
+.grading-step span span {
+  margin-top: 0.15rem;
+  overflow: hidden;
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grading-step small {
+  font-size: 0.625rem;
+}
+
+.grading-step-active small {
+  color: var(--color-brand-400);
+}
+
+.grading-step-complete small {
+  color: var(--color-status-success);
+}
+
+.grading-step-error small {
+  color: var(--color-status-error);
+}
+
+.grading-footer {
+  display: flex;
+  min-height: 4.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  border: 1px solid var(--color-border-glass);
+  border-radius: var(--radius-control);
+  padding: 0.9rem 1rem;
+  background: rgb(21 27 38 / 0.58);
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+}
+
+.grading-footer strong {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-label);
+}
+
+.grading-footer p {
+  margin: 0.2rem 0 0;
+}
+
+.grading-result-link {
+  display: inline-flex;
+  min-height: var(--spacing-control);
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--color-brand-400);
+  border-radius: var(--radius-control);
+  padding: var(--spacing-control-y) var(--spacing-control-x);
+  background: var(--color-brand-500);
+  color: var(--color-text-on-brand);
+  font-size: var(--text-label);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--shadow-button);
+}
+
+.grading-result-link:hover {
+  background: var(--color-brand-600);
+}
+
+.grading-result-link:focus-visible {
+  outline: 2px solid var(--color-brand-400);
+  outline-offset: 3px;
+}
+
+@keyframes grading-pulse {
+  50% { opacity: 0.55; transform: scale(0.9); }
+}
+
+@media (max-width: 48rem) {
+  .grading-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .grading-progress-column {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border-glass);
+    padding: 2rem 1rem 1.5rem;
+  }
+
+  .grading-progress-ring {
+    width: 9.5rem;
+    height: 9.5rem;
+  }
+
+  .grading-progress-ring-inner {
+    width: 7.9rem;
+    height: 7.9rem;
+  }
+}
+
+@media (max-width: 39.999rem) {
+  .grading-heading,
+  .grading-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .grading-status-badge {
+    align-self: flex-start;
+  }
+
+  .grading-step {
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+  }
+
+  .grading-step small {
+    grid-column: 2;
+  }
+
+  .grading-footer > button,
+  .grading-result-link {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grading-progress-ring,
+  .grading-step,
+  .grading-step-marker,
+  .grading-result-link {
+    animation: none;
+    transition: none;
+  }
+}

@@ -1,13 +1,23 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
+import { AuthContext } from '@/app/providers/AuthContext'
 import { AppRouter } from '@/app/router/AppRouter'
 
 function renderRoute(path: string) {
   return renderToStaticMarkup(
-    <MemoryRouter initialEntries={[path]}>
-      <AppRouter />
-    </MemoryRouter>,
+    <AuthContext.Provider
+      value={{
+        isLoading: false,
+        invalidateAuth: () => {},
+        logout: async () => {},
+        member: { uuid: 'member-1', nickname: '테스트 사용자' },
+      }}
+    >
+      <MemoryRouter initialEntries={[path]}>
+        <AppRouter />
+      </MemoryRouter>
+    </AuthContext.Provider>,
   )
 }
 
@@ -45,7 +55,7 @@ describe('AppRouter', () => {
     expect(html).toContain('카카오로 시작하기')
     expect(html).not.toContain('aria-label="주요 메뉴"')
     expect(html).not.toContain('aria-label="새 퀴즈 만들기"')
-    expect(html).not.toContain('aria-label="전성 프로필"')
+    expect(html).not.toContain('aria-label="프로필"')
   })
 
   it('현재 주요 메뉴를 aria-current로 표시한다', () => {
@@ -67,8 +77,8 @@ describe('AppRouter', () => {
 
     expect(html).toContain('aria-label="새 퀴즈 만들기"')
     expect(html).toContain('>새 퀴즈</span>')
-    expect(html).toContain('aria-label="전성 프로필"')
-    expect(html).not.toContain('>전성</span>')
+    expect(html).toContain('aria-label="테스트 사용자 프로필"')
+    expect(html).not.toContain('>테스트 사용자</span>')
   })
 
   it('공통 헤더에 책 심볼과 Readle 워드마크를 표시한다', () => {

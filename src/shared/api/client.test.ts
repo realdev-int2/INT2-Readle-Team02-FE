@@ -1,9 +1,68 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { apiRequest } from '@/shared/api/client'
+import {
+  apiRequest,
+  clearAccessToken,
+  registerAuthHandlers,
+  setAccessToken,
+} from '@/shared/api/client'
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    headers: { 'Content-Type': 'application/json' },
+    status,
+  })
+}
 
 describe('apiRequest', () => {
+  let unregisterAuthHandlers: (() => void) | undefined
+
   afterEach(() => {
+    unregisterAuthHandlers?.()
+    unregisterAuthHandlers = undefined
+    clearAccessToken()
     vi.unstubAllGlobals()
+  })
+
+  it('설정된 access token을 Authorization에 붙이고 clear 이후에는 붙이지 않는다', async () => {
+    const fetchMock = vi.fn().mockImplementation(
+      () =>
+        Promise.resolve(
+          new Response(JSON.stringify({ data: {} }), {
+            headers: { 'Content-Type': 'application/json' },
+            status: 200,
+          }),
+        ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    setAccessToken('access-token')
+    await apiRequest('/contents')
+
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBe(
+      'Bearer access-token',
+    )
+
+    clearAccessToken()
+    await apiRequest('/contents')
+
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Authorization')).toBeNull()
+  })
+
+  it('명시한 Authorization 헤더는 access token으로 덮어쓰지 않는다', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: {} }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    setAccessToken('access-token')
+
+    await apiRequest('/contents', { headers: { Authorization: 'Bearer explicit-token' } })
+
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBe(
+      'Bearer explicit-token',
+    )
   })
 
   it('모든 요청에 /api prefix를 붙이고 성공 응답을 반환한다', async () => {
@@ -93,4 +152,126 @@ describe('apiRequest', () => {
       status: 0,
     })
   })
+
+  it('보호된 요청의 첫 401은 한 번 refresh하고 한 번 재시도한다', async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined)
+    unregisterAuthHandlers = registerAuthHandlers({ invalidate: vi.fn(), refresh })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { error: { code: 'UNAUTHORIZED', details: [], message: '로그인이 필요합니다.' } },
+          401,
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse({ data: { contentId: 101 } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(apiRequest('/contents', { requiresAuth: true })).resolves.toEqual({
+      data: { contentId: 101 },
+    })
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('동시 보호 요청은 하나의 refresh를 공유한다', async () => {
+    let resolveRefresh: () => void = () => {}
+    let signalRefreshStarted: () => void = () => {}
+    const refreshStarted = new Promise<void>((resolve) => {
+      signalRefreshStarted = resolve
+    })
+    const refresh = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRefresh = resolve
+          signalRefreshStarted()
+        }),
+    )
+    unregisterAuthHandlers = registerAuthHandlers({ invalidate: vi.fn(), refresh })
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          jsonResponse(
+            { error: { code: 'UNAUTHORIZED', details: [], message: '로그인이 필요합니다.' } },
+            401,
+          ),
+        )
+        .mockResolvedValueOnce(
+          jsonResponse(
+            { error: { code: 'UNAUTHORIZED', details: [], message: '로그인이 필요합니다.' } },
+            401,
+          ),
+        )
+        .mockResolvedValueOnce(jsonResponse({ data: { id: 1 } }))
+        .mockResolvedValueOnce(jsonResponse({ data: { id: 2 } })),
+    )
+
+    const requests = [
+      apiRequest('/contents/1', { requiresAuth: true }),
+      apiRequest('/contents/2', { requiresAuth: true }),
+    ]
+    await refreshStarted
+    resolveRefresh()
+
+    await expect(Promise.all(requests)).resolves.toEqual([
+      { data: { id: 1 } },
+      { data: { id: 2 } },
+    ])
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('refresh 실패 시 인증 상태를 무효화한다', async () => {
+    const invalidate = vi.fn()
+    unregisterAuthHandlers = registerAuthHandlers({
+      invalidate,
+      refresh: vi.fn().mockRejectedValue(new Error('refresh failed')),
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          { error: { code: 'UNAUTHORIZED', details: [], message: '로그인이 필요합니다.' } },
+          401,
+        ),
+      ),
+    )
+
+    await expect(apiRequest('/contents', { requiresAuth: true })).rejects.toMatchObject({
+      status: 401,
+    })
+
+    expect(invalidate).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['/auth/session', '/auth/refresh', '/auth/logout'])(
+    '%s 요청은 401이어도 자동 refresh하지 않는다',
+    async (path) => {
+      const refresh = vi.fn().mockResolvedValue(undefined)
+      unregisterAuthHandlers = registerAuthHandlers({ invalidate: vi.fn(), refresh })
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          jsonResponse(
+            {
+              error: {
+                code: 'UNAUTHORIZED',
+                details: [],
+                message: '로그인이 필요합니다.',
+              },
+            },
+            401,
+          ),
+        ),
+      )
+
+      await expect(apiRequest(path, { requiresAuth: true })).rejects.toMatchObject({
+        status: 401,
+      })
+
+      expect(refresh).not.toHaveBeenCalled()
+    },
+  )
 })

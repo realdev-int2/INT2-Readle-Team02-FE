@@ -12,6 +12,7 @@ export function extractContent(request: ExtractContentRequest) {
   return apiRequest<ApiResponse<ExtractContentResponse>>('/contents/extract', {
     body: request,
     method: 'POST',
+    requiresAuth: true,
   })
 }
 
@@ -19,11 +20,13 @@ export function createContent(request: CreateContentRequest) {
   return apiRequest<ApiResponse<CreateContentResponse>>('/contents', {
     body: request,
     method: 'POST',
+    requiresAuth: true,
   })
 }
 
 export function getContentValidation(contentId: number) {
   return apiRequest<ApiResponse<ContentValidationResponse>>(
     `/contents/${contentId}/validation`,
+    { requiresAuth: true },
   )
 }

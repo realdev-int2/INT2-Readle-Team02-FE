@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type MouseEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { useAuth } from '@/app/providers/AuthContext'
 import readleSymbolUrl from '@/shared/assets/readle-symbol.png'
 import readleWordmarkUrl from '@/shared/assets/readle-wordmark.png'
 import { ROUTES } from '@/shared/config/routes'
@@ -183,8 +184,13 @@ function ProductPreview() {
 
 export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
   const navigate = useNavigate()
+  const { member, logout } = useAuth()
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const [loginOpen, setLoginOpen] = useState(initialLoginOpen)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
+  const nickname = member?.nickname.trim() ?? ''
+  const profileLabel = member ? `${member.nickname} 프로필` : '프로필'
 
   function openLogin(event: MouseEvent<HTMLElement>) {
     returnFocusRef.current = event.currentTarget
@@ -200,6 +206,23 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
 
     window.requestAnimationFrame(() => returnFocusRef.current?.focus())
   }, [initialLoginOpen, navigate])
+
+  async function handleLogout() {
+    if (isLoggingOut) {
+      return
+    }
+
+    setIsLoggingOut(true)
+    setLogoutError('')
+
+    try {
+      await logout()
+    } catch {
+      setLogoutError('로그아웃에 실패했습니다. 다시 시도해 주세요.')
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   return (
     <div className="landing-page text-text-primary">
@@ -224,13 +247,51 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
               핵심 기능
             </a>
           </nav>
-          <button
-            className="rounded-control border border-border-strong bg-surface-panel px-4 py-2 text-label font-semibold text-text-primary transition-all hover:border-brand-400/60 hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
-            onClick={openLogin}
-            type="button"
-          >
-            로그인
-          </button>
+          {member ? (
+            <div className="flex items-center gap-2">
+              <div
+                aria-label={profileLabel}
+                className="grid min-h-9 place-items-center rounded-control px-1"
+                role="img"
+              >
+                <span
+                  aria-hidden="true"
+                  className="grid size-8 place-items-center rounded-full border border-brand-400/30 bg-brand-500/15 text-caption font-bold text-brand-400"
+                >
+                  {nickname ? (
+                    nickname.charAt(0)
+                  ) : (
+                    <svg className="size-4.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v2h16v-2c0-2.76-3.58-5-8-5Z" />
+                    </svg>
+                  )}
+                </span>
+              </div>
+              <button
+                aria-busy={isLoggingOut}
+                aria-describedby={logoutError ? 'landing-logout-error' : undefined}
+                className="min-h-9 rounded-control px-2 text-caption font-semibold text-text-secondary transition-colors hover:bg-surface-elevated hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isLoggingOut}
+                onClick={() => void handleLogout()}
+                type="button"
+              >
+                {isLoggingOut ? '로그아웃 중' : '로그아웃'}
+              </button>
+              {logoutError && (
+                <p className="text-caption text-status-error" id="landing-logout-error" role="alert">
+                  {logoutError}
+                </p>
+              )}
+            </div>
+          ) : (
+            <button
+              className="rounded-control border border-border-strong bg-surface-panel px-4 py-2 text-label font-semibold text-text-primary transition-all hover:border-brand-400/60 hover:bg-surface-elevated focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+              onClick={openLogin}
+              type="button"
+            >
+              로그인
+            </button>
+          )}
         </PageContainer>
       </header>
 

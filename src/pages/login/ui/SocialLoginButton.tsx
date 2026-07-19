@@ -1,7 +1,7 @@
 type SocialLoginProvider = 'google' | 'kakao'
 
 interface SocialLoginButtonProps {
-  onSelect: (provider: SocialLoginProvider) => void
+  href: string
   provider: SocialLoginProvider
 }
 
@@ -46,22 +46,21 @@ function KakaoIcon() {
   )
 }
 
-export function SocialLoginButton({ onSelect, provider }: SocialLoginButtonProps) {
+export function SocialLoginButton({ href, provider }: SocialLoginButtonProps) {
   const isKakao = provider === 'kakao'
 
   return (
-    <button
+    <a
       className={`flex min-h-control w-full items-center justify-center gap-3 rounded-control border px-control-x py-control-y text-label font-semibold transition-all duration-150 active:scale-98 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${
         isKakao
           ? 'border-transparent bg-[#FEE500] text-[#191919] hover:bg-[#F5DC00]'
           : 'border-border-default bg-surface-canvas text-text-primary hover:border-brand-400/40 hover:bg-surface-elevated'
       }`}
-      onClick={() => onSelect(provider)}
-      type="button"
+      href={href}
     >
       {isKakao ? <KakaoIcon /> : <GoogleIcon />}
       {providerLabel[provider]}
-    </button>
+    </a>
   )
 }
 

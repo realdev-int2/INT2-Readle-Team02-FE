@@ -1,25 +1,40 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import readleSymbolUrl from '@/shared/assets/readle-symbol.png'
 import readleWordmarkUrl from '@/shared/assets/readle-wordmark.png'
-import {
-  SocialLoginButton,
-  type SocialLoginProvider,
-} from '@/pages/login/ui/SocialLoginButton'
+import { SocialLoginButton } from '@/pages/login/ui/SocialLoginButton'
+import { ROUTES } from '@/shared/config/routes'
 
 interface LoginModalProps {
   onClose: () => void
   open: boolean
 }
 
-const mockMessage: Record<SocialLoginProvider, string> = {
-  google: 'Google 로그인 연동은 준비 중입니다.',
-  kakao: '카카오 로그인 연동은 준비 중입니다.',
+function sanitizeReturnTo(value: string | null) {
+  if (
+    !value ||
+    typeof window === 'undefined' ||
+    !value.startsWith('/') ||
+    value.startsWith('//')
+  ) {
+    return ROUTES.landing
+  }
+
+  try {
+    const url = new URL(value, window.location.origin)
+
+    if (url.origin !== window.location.origin || url.pathname === ROUTES.login) {
+      return ROUTES.landing
+    }
+
+    return `${url.pathname}${url.search}`
+  } catch {
+    return ROUTES.landing
+  }
 }
 
 export function LoginModal({ onClose, open }: LoginModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
-  const [selectedProvider, setSelectedProvider] = useState<SocialLoginProvider | null>(null)
 
   useEffect(() => {
     if (!open) {
@@ -72,6 +87,14 @@ export function LoginModal({ onClose, open }: LoginModalProps) {
     return null
   }
 
+  const returnTo =
+    typeof window === 'undefined'
+      ? ROUTES.landing
+      : sanitizeReturnTo(
+          new URLSearchParams(window.location.search).get('returnTo') ??
+            window.location.pathname + window.location.search,
+        )
+
   return (
     <div
       className="fixed inset-0 z-100 grid place-items-center overflow-y-auto bg-surface-canvas/80 px-4 py-8 backdrop-blur-md"
@@ -113,17 +136,15 @@ export function LoginModal({ onClose, open }: LoginModalProps) {
         </div>
 
         <div className="grid gap-3">
-          <SocialLoginButton onSelect={setSelectedProvider} provider="google" />
-          <SocialLoginButton onSelect={setSelectedProvider} provider="kakao" />
+          <SocialLoginButton
+            href={`/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`}
+            provider="google"
+          />
+          <SocialLoginButton
+            href={`/api/auth/kakao/start?returnTo=${encodeURIComponent(returnTo)}`}
+            provider="kakao"
+          />
         </div>
-
-        <p
-          aria-live="polite"
-          className="mt-4 min-h-5 text-center text-caption text-text-secondary"
-          role="status"
-        >
-          {selectedProvider ? mockMessage[selectedProvider] : ''}
-        </p>
 
         <p className="mt-2 text-center text-[0.6875rem] leading-relaxed text-text-muted">
           계속하면 Readle의 이용약관 및 개인정보 처리방침에 동의한 것으로 간주합니다.

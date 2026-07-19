@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { clearAccessToken } from '@/shared/api/client'
+import { apiRequest, clearAccessToken } from '@/shared/api/client'
 import {
   getAuthSession,
   getCurrentMember,
@@ -67,6 +67,46 @@ describe('restoreAuth', () => {
 
     await expect(restoreAuth()).resolves.toBeNull()
     expect(getCurrentMember).not.toHaveBeenCalled()
+  })
+
+  it('취소된 복구는 refresh 완료 후 access token을 설정하지 않는다', async () => {
+    let cancelled = false
+    let resolveRefresh!: (value: Awaited<ReturnType<typeof refreshAccessToken>>) => void
+    let signalRefreshStarted!: () => void
+    const refreshStarted = new Promise<void>((resolve) => {
+      signalRefreshStarted = resolve
+    })
+    const pendingRefresh = new Promise<Awaited<ReturnType<typeof refreshAccessToken>>>((resolve) => {
+      resolveRefresh = resolve
+    })
+
+    vi.mocked(getAuthSession).mockResolvedValue({
+      data: { authenticated: true, uuid: 'member-uuid' },
+    })
+    vi.mocked(refreshAccessToken).mockImplementation(() => {
+      signalRefreshStarted()
+      return pendingRefresh
+    })
+
+    const restorePromise = restoreAuth(() => cancelled)
+    await refreshStarted
+    cancelled = true
+    resolveRefresh({ data: { accessToken: 'stale-access-token' } })
+
+    await expect(restorePromise).resolves.toBeNull()
+    expect(getCurrentMember).not.toHaveBeenCalled()
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ data: {} }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await apiRequest('/contents')
+
+    expect(new Headers(fetchMock.mock.calls[0][1].headers).get('Authorization')).toBeNull()
   })
 
   it('로그아웃 요청 전에 access token을 갱신하지 않는다', async () => {

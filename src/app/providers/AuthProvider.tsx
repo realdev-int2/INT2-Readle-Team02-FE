@@ -19,19 +19,26 @@ interface AuthProviderProps {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export async function restoreAuth(): Promise<Member | null> {
+export async function restoreAuth(isCancelled: () => boolean = () => false): Promise<Member | null> {
   try {
     await getAuthSession()
     const {
       data: { accessToken },
     } = await refreshAccessToken()
 
+    if (isCancelled()) {
+      return null
+    }
+
     setAccessToken(accessToken)
     const { data: currentMember } = await getCurrentMember()
 
     return currentMember
   } catch {
-    clearAccessToken()
+    if (!isCancelled()) {
+      clearAccessToken()
+    }
+
     return null
   }
 }
@@ -74,7 +81,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let cancelled = false
 
-    void restoreAuth().then((currentMember) => {
+    void restoreAuth(() => cancelled).then((currentMember) => {
       if (!cancelled) {
         setMember(currentMember)
         setIsLoading(false)

@@ -17,14 +17,12 @@ export interface ApiErrorBody {
 
 export interface Member {
   uuid: string
-  email: string | null
   nickname: string
-  profileImageUrl: string | null
 }
 
 export interface AuthSession {
   authenticated: boolean
-  user: Member | null
+  uuid: string | null
 }
 
 export type ContentInputType = 'url' | 'text'

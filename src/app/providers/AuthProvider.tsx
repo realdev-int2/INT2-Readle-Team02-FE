@@ -46,10 +46,16 @@ export async function restoreAuth(isCancelled: () => boolean = () => false): Pro
 export function AuthProvider({ children }: AuthProviderProps) {
   const [member, setMember] = useState<Member | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [sessionExpired, setSessionExpired] = useState(false)
 
-  const invalidateAuth = useCallback(() => {
+  const invalidateAuth = useCallback((reason?: 'session_expired') => {
     clearAccessToken()
     setMember(null)
+    setSessionExpired(reason === 'session_expired')
+  }, [])
+
+  const consumeSessionExpired = useCallback(() => {
+    setSessionExpired(false)
   }, [])
 
   const refreshAuth = useCallback(async () => {
@@ -95,7 +101,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ invalidateAuth, isLoading, logout, member }}>
+    <AuthContext.Provider
+      value={{ consumeSessionExpired, invalidateAuth, isLoading, logout, member, sessionExpired }}
+    >
       {children}
     </AuthContext.Provider>
   )

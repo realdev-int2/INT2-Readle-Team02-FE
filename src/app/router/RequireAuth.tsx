@@ -4,7 +4,7 @@ import { ROUTES } from '@/shared/config/routes'
 import { Loading } from '@/shared/ui'
 
 export function RequireAuth() {
-  const { isLoading, member } = useAuth()
+  const { isLoading, member, sessionExpired } = useAuth()
   const location = useLocation()
 
   if (isLoading) {
@@ -17,7 +17,10 @@ export function RequireAuth() {
 
   if (!member) {
     const returnTo = `${location.pathname}${location.search}`
-    const loginUrl = `${ROUTES.login}?${new URLSearchParams({ returnTo })}`
+    const loginUrl = `${ROUTES.login}?${new URLSearchParams({
+      ...(sessionExpired ? { authError: 'session_expired' } : {}),
+      returnTo,
+    })}`
 
     return <Navigate replace to={loginUrl} />
   }

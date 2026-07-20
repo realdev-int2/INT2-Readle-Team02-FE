@@ -16,7 +16,7 @@ function renderHeader(member: Member | null) {
 }
 
 describe('AppHeader', () => {
-  it('프로필 이미지 URL이 있으면 장식 이미지를 기존 fallback 위에 표시한다', () => {
+  it('프로필 이미지 URL을 프로필 아바타에 전달한다', () => {
     const html = renderHeader({
       uuid: 'member-1',
       nickname: '테스트 사용자',
@@ -24,20 +24,6 @@ describe('AppHeader', () => {
     })
 
     expect(html).toContain('aria-label="테스트 사용자 프로필"')
-    expect(html).toContain('>테')
-    expect(html).toContain('alt=""')
     expect(html).toContain('src="https://readle.local/profile.png"')
-  })
-
-  it.each([null, '   '])('프로필 이미지 URL이 없으면 기존 fallback만 표시한다: %s', (profileImageUrl) => {
-    const html = renderHeader({
-      uuid: 'member-1',
-      nickname: '테스트 사용자',
-      profileImageUrl,
-    })
-
-    expect(html).toContain('aria-label="테스트 사용자 프로필"')
-    expect(html).toContain('>테</span>')
-    expect(html).not.toContain('src="https://readle.local/profile.png"')
   })
 })

@@ -46,12 +46,12 @@ export async function restoreAuth(isCancelled: () => boolean = () => false): Pro
 
     return currentMember
   } catch (error) {
-    if (!isCancelled()) {
-      clearAccessToken()
-    }
-
     if (isSessionExpired(error)) {
       throw error
+    }
+
+    if (!isCancelled()) {
+      clearAccessToken()
     }
 
     return null

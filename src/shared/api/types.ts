@@ -18,6 +18,7 @@ export interface ApiErrorBody {
 export interface Member {
   uuid: string
   nickname: string
+  profileImageUrl: string | null
 }
 
 export interface AuthSession {

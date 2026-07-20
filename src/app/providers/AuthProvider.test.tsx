@@ -49,12 +49,13 @@ describe('restoreAuth', () => {
     })
     vi.mocked(getCurrentMember).mockImplementation(async () => {
       calls.push('member')
-      return { data: { uuid: 'member-uuid', nickname: 'Readle 개발자' } }
+      return { data: { uuid: 'member-uuid', nickname: 'Readle 개발자', profileImageUrl: null } }
     })
 
     await expect(restoreAuth()).resolves.toEqual({
       uuid: 'member-uuid',
       nickname: 'Readle 개발자',
+      profileImageUrl: null,
     })
     expect(calls).toEqual(['session', 'refresh', 'member'])
   })

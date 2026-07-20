@@ -21,7 +21,14 @@ interface AuthProviderProps {
 // eslint-disable-next-line react-refresh/only-export-components
 export async function restoreAuth(isCancelled: () => boolean = () => false): Promise<Member | null> {
   try {
-    await getAuthSession()
+    const {
+      data: { authenticated },
+    } = await getAuthSession()
+
+    if (!authenticated) {
+      return null
+    }
+
     const {
       data: { accessToken },
     } = await refreshAccessToken()

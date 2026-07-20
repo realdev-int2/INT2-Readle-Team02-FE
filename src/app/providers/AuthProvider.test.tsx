@@ -37,11 +37,11 @@ describe('restoreAuth', () => {
     authContext.logout = null
   })
 
-  it('authenticated=false 세션이어도 refresh 후 현재 회원을 복구한다', async () => {
+  it('인증 세션이면 refresh 후 현재 회원을 복구한다', async () => {
     const calls: string[] = []
     vi.mocked(getAuthSession).mockImplementation(async () => {
       calls.push('session')
-      return { data: { authenticated: false, uuid: null } }
+      return { data: { authenticated: true, uuid: 'member-uuid' } }
     })
     vi.mocked(refreshAccessToken).mockImplementation(async () => {
       calls.push('refresh')
@@ -58,6 +58,15 @@ describe('restoreAuth', () => {
       profileImageUrl: null,
     })
     expect(calls).toEqual(['session', 'refresh', 'member'])
+  })
+
+  it('비인증 세션이면 refresh 없이 비로그인 상태를 반환한다', async () => {
+    vi.mocked(getAuthSession).mockResolvedValue({ data: { authenticated: false, uuid: null } })
+
+    await expect(restoreAuth()).resolves.toBeNull()
+
+    expect(refreshAccessToken).not.toHaveBeenCalled()
+    expect(getCurrentMember).not.toHaveBeenCalled()
   })
 
   it('복구 중 요청이 실패하면 비로그인 상태를 반환한다', async () => {

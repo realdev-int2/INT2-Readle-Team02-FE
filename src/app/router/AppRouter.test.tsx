@@ -11,7 +11,7 @@ function renderRoute(path: string) {
         isLoading: false,
         invalidateAuth: () => {},
         logout: async () => {},
-        member: { uuid: 'member-1', nickname: '테스트 사용자' },
+        member: { uuid: 'member-1', nickname: '테스트 사용자', profileImageUrl: null },
       }}
     >
       <MemoryRouter initialEntries={[path]}>

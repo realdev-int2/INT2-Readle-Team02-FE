@@ -4,7 +4,7 @@ import { useAuth } from '@/app/providers/AuthContext'
 import readleSymbolUrl from '@/shared/assets/readle-symbol.png'
 import readleWordmarkUrl from '@/shared/assets/readle-wordmark.png'
 import { ROUTES } from '@/shared/config/routes'
-import { PageContainer } from '@/shared/ui'
+import { PageContainer, ProfileAvatar } from '@/shared/ui'
 import { LoginModal } from '@/pages/landing/ui/LoginModal'
 import '@/pages/landing/LandingPage.css'
 
@@ -189,7 +189,6 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
   const [loginOpen, setLoginOpen] = useState(initialLoginOpen)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
-  const nickname = member?.nickname.trim() ?? ''
   const profileLabel = member ? `${member.nickname} 프로필` : '프로필'
 
   function openLogin(event: MouseEvent<HTMLElement>) {
@@ -249,24 +248,11 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
           </nav>
           {member ? (
             <div className="flex items-center gap-2">
-              <div
-                aria-label={profileLabel}
-                className="grid min-h-9 place-items-center rounded-control px-1"
-                role="img"
-              >
-                <span
-                  aria-hidden="true"
-                  className="grid size-8 place-items-center rounded-full border border-brand-400/30 bg-brand-500/15 text-caption font-bold text-brand-400"
-                >
-                  {nickname ? (
-                    nickname.charAt(0)
-                  ) : (
-                    <svg className="size-4.5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v2h16v-2c0-2.76-3.58-5-8-5Z" />
-                    </svg>
-                  )}
-                </span>
-              </div>
+              <ProfileAvatar
+                imageUrl={member.profileImageUrl}
+                label={profileLabel}
+                nickname={member.nickname}
+              />
               <button
                 aria-busy={isLoggingOut}
                 aria-describedby={logoutError ? 'landing-logout-error' : undefined}

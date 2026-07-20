@@ -14,7 +14,7 @@ vi.mock('react-router', async (importOriginal) => {
   }
 })
 
-const member: Member = { nickname: '전성', uuid: 'member-1' }
+const member: Member = { nickname: '전성', profileImageUrl: null, uuid: 'member-1' }
 
 function renderRequireAuth(
   path: string,

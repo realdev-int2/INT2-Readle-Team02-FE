@@ -70,12 +70,22 @@ describe('LandingPage', () => {
   })
 
   it('로그인한 회원에게는 헤더 프로필과 로그아웃을 표시한다', () => {
-    const html = renderLanding(false, {}, { uuid: 'member-1', nickname: '테스트 사용자' })
+    const html = renderLanding(false, {}, { uuid: 'member-1', nickname: '테스트 사용자', profileImageUrl: null })
 
     expect(html).toContain('aria-label="테스트 사용자 프로필"')
-    expect(html).toContain('>테</span>')
     expect(html).toContain('>로그아웃</button>')
     expect(html).not.toContain('>로그인</button>')
+  })
+
+  it('프로필 이미지 URL을 프로필 아바타에 전달한다', () => {
+    const html = renderLanding(false, {}, {
+      uuid: 'member-1',
+      nickname: '테스트 사용자',
+      profileImageUrl: 'https://readle.local/profile.png',
+    })
+
+    expect(html).toContain('aria-label="테스트 사용자 프로필"')
+    expect(html).toContain('src="https://readle.local/profile.png"')
   })
 
   it('Google과 카카오 OAuth 시작 링크를 root returnTo로 표시한다', () => {

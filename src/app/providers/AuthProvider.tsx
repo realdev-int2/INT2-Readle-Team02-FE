@@ -18,6 +18,10 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
+function isSessionExpired(error: unknown) {
+  return error instanceof ApiError && error.status === 401 && error.code === 'INVALID_REFRESH_TOKEN'
+}
+
 // eslint-disable-next-line react-refresh/only-export-components
 export async function restoreAuth(isCancelled: () => boolean = () => false): Promise<Member | null> {
   try {
@@ -41,9 +45,13 @@ export async function restoreAuth(isCancelled: () => boolean = () => false): Pro
     const { data: currentMember } = await getCurrentMember()
 
     return currentMember
-  } catch {
+  } catch (error) {
     if (!isCancelled()) {
       clearAccessToken()
+    }
+
+    if (isSessionExpired(error)) {
+      throw error
     }
 
     return null
@@ -94,18 +102,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let cancelled = false
 
-    void restoreAuth(() => cancelled).then((currentMember) => {
-      if (!cancelled) {
-        setMember(currentMember)
-        setIsLoading(false)
-      }
-    })
+    void restoreAuth(() => cancelled)
+      .then((currentMember) => {
+        if (!cancelled) {
+          setMember(currentMember)
+          setIsLoading(false)
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          if (isSessionExpired(error)) {
+            invalidateAuth('session_expired')
+          }
+          setIsLoading(false)
+        }
+      })
 
     return () => {
       cancelled = true
       clearAccessToken()
     }
-  }, [])
+  }, [invalidateAuth])
 
   return (
     <AuthContext.Provider

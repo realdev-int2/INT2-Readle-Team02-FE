@@ -5,6 +5,7 @@ import {
   registerAuthHandlers,
   setAccessToken,
 } from '@/shared/api/client'
+import { ApiError } from '@/shared/api/error'
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -223,11 +224,43 @@ describe('apiRequest', () => {
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 
-  it('refresh 실패 시 인증 상태를 무효화한다', async () => {
+  it('보호된 요청의 다른 refresh 실패는 인증 상태를 유지하고 오류를 전파한다', async () => {
+    const invalidate = vi.fn()
+    const refreshError = new ApiError({
+      code: 'OTHER_REFRESH_ERROR',
+      message: '다른 refresh 오류',
+      status: 401,
+    })
+    unregisterAuthHandlers = registerAuthHandlers({
+      invalidate,
+      refresh: vi.fn().mockRejectedValue(refreshError),
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          { error: { code: 'UNAUTHORIZED', details: [], message: '로그인이 필요합니다.' } },
+          401,
+        ),
+      ),
+    )
+
+    await expect(apiRequest('/contents', { requiresAuth: true })).rejects.toBe(refreshError)
+
+    expect(invalidate).not.toHaveBeenCalled()
+  })
+
+  it('보호된 요청의 401 뒤 INVALID_REFRESH_TOKEN refresh 실패만 session_expired로 무효화한다', async () => {
     const invalidate = vi.fn()
     unregisterAuthHandlers = registerAuthHandlers({
       invalidate,
-      refresh: vi.fn().mockRejectedValue(new Error('refresh failed')),
+      refresh: vi.fn().mockRejectedValue(
+        new ApiError({
+          code: 'INVALID_REFRESH_TOKEN',
+          message: 'refresh token이 만료되었습니다.',
+          status: 401,
+        }),
+      ),
     })
     vi.stubGlobal(
       'fetch',
@@ -243,14 +276,74 @@ describe('apiRequest', () => {
       status: 401,
     })
 
-    expect(invalidate).toHaveBeenCalledTimes(1)
+    expect(invalidate).toHaveBeenCalledWith('session_expired')
+  })
+
+  it.each([
+    new ApiError({ code: 'INVALID_REFRESH_TOKEN', message: 'CSRF 실패', status: 403 }),
+    new ApiError({ code: 'OTHER_REFRESH_ERROR', message: '다른 refresh 오류', status: 401 }),
+    new ApiError({ code: 'UNKNOWN_ERROR', message: '서버 오류', status: 500 }),
+    new ApiError({ code: 'INVALID_RESPONSE', message: '응답 형식 오류', status: 200 }),
+    new TypeError('Failed to fetch'),
+  ])('다른 refresh 실패는 인증 상태를 유지한다: %s', async (refreshError) => {
+    const invalidate = vi.fn()
+    unregisterAuthHandlers = registerAuthHandlers({
+      invalidate,
+      refresh: vi.fn().mockRejectedValue(refreshError),
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          { error: { code: 'UNAUTHORIZED', details: [], message: '로그인이 필요합니다.' } },
+          401,
+        ),
+      ),
+    )
+
+    await expect(apiRequest('/contents', { requiresAuth: true })).rejects.toBe(refreshError)
+
+    expect(invalidate).not.toHaveBeenCalled()
+  })
+
+  it('재시도한 보호 요청의 401은 인증 상태를 유지하고 전파한다', async () => {
+    const invalidate = vi.fn()
+    unregisterAuthHandlers = registerAuthHandlers({
+      invalidate,
+      refresh: vi.fn().mockResolvedValue(undefined),
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          jsonResponse(
+            { error: { code: 'UNAUTHORIZED', details: [], message: '로그인이 필요합니다.' } },
+            401,
+          ),
+        )
+        .mockResolvedValueOnce(
+          jsonResponse(
+            { error: { code: 'UNAUTHORIZED', details: [], message: '로그인이 필요합니다.' } },
+            401,
+          ),
+        ),
+    )
+
+    await expect(apiRequest('/contents', { requiresAuth: true })).rejects.toMatchObject({
+      code: 'UNAUTHORIZED',
+      status: 401,
+    })
+
+    expect(invalidate).not.toHaveBeenCalled()
   })
 
   it.each(['/auth/session', '/auth/refresh', '/auth/logout'])(
     '%s 요청은 401이어도 자동 refresh하지 않는다',
     async (path) => {
       const refresh = vi.fn().mockResolvedValue(undefined)
-      unregisterAuthHandlers = registerAuthHandlers({ invalidate: vi.fn(), refresh })
+      const invalidate = vi.fn()
+      unregisterAuthHandlers = registerAuthHandlers({ invalidate, refresh })
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue(
@@ -272,6 +365,7 @@ describe('apiRequest', () => {
       })
 
       expect(refresh).not.toHaveBeenCalled()
+      expect(invalidate).not.toHaveBeenCalled()
     },
   )
 })

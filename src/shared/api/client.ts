@@ -13,7 +13,7 @@ let refreshPromise: Promise<boolean> | null = null
 
 interface AuthHandlers {
   refresh: () => Promise<void>
-  invalidate: () => void
+  invalidate: (reason?: 'session_expired') => void
 }
 
 export function setAccessToken(token: string) {
@@ -103,9 +103,17 @@ async function refreshForProtectedRequest() {
     refreshPromise = handlers
       .refresh()
       .then(() => true)
-      .catch(() => {
-        handlers.invalidate()
-        return false
+      .catch((error: unknown) => {
+        if (
+          error instanceof ApiError &&
+          error.status === 401 &&
+          error.code === 'INVALID_REFRESH_TOKEN'
+        ) {
+          handlers.invalidate('session_expired')
+          return false
+        }
+
+        throw error
       })
       .finally(() => {
         refreshPromise = null
@@ -151,9 +159,6 @@ async function sendApiRequest<T>(
       return sendApiRequest(path, { body, headers, requiresAuth, ...options }, true)
     }
 
-    if (retried) {
-      authHandlers?.invalidate()
-    }
   }
 
   const responseBody = await parseResponseBody(response)

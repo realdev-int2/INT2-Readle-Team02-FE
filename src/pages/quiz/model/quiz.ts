@@ -6,14 +6,27 @@ export interface QuizChoice {
   orderNo: number
 }
 
-export interface QuizQuestion {
-  choices?: QuizChoice[]
-  codeSnippet?: string
+export interface QuizQuestionBase {
   orderNo: number
   questionId: number
   questionText: string
-  type: QuizQuestionType
 }
+
+export interface QuizMultipleChoiceQuestion extends QuizQuestionBase {
+  type: 'multiple_choice'
+  choices: QuizChoice[]
+}
+
+export interface QuizShortAnswerQuestion extends QuizQuestionBase {
+  type: 'short_answer'
+}
+
+export interface QuizCodeBlankQuestion extends QuizQuestionBase {
+  type: 'code_blank'
+  codeSnippet: string
+}
+
+export type QuizQuestion = QuizMultipleChoiceQuestion | QuizShortAnswerQuestion | QuizCodeBlankQuestion
 
 export interface QuizFixture {
   questionCount: number

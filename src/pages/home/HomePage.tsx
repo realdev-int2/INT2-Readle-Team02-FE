@@ -61,9 +61,15 @@ export function HomePage() {
     }
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
-    setTouched(mode === 'url' ? { url: true } : { content: true, title: true })
+    setTouched(
+      mode === 'url'
+        ? isExtracted
+          ? { content: true, title: true, url: true }
+          : { url: true }
+        : { content: true, title: true }
+    )
     setExtractError(null)
 
     if (!isValid) {

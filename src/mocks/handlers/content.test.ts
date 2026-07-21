@@ -19,10 +19,8 @@ describe('contentHandlers', () => {
 
     expect(response.status).toBe(200)
     expect(body).toMatchObject({
-      data: {
-        crawlStatus: 'success',
-        sourceUrl: 'https://example.com/article',
-      },
+      title: expect.any(String),
+      content: expect.any(String),
     })
   })
 

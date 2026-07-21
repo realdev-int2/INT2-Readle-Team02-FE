@@ -24,35 +24,39 @@ import { QuizSubmitConfirm } from '@/pages/quiz/ui/QuizSubmitConfirm'
 // ─── API 응답 → 내부 모델 변환 ────────────────────────────────────────────────
 
 function toQuizQuestion(q: QuizDetailResponse['questions'][number]): QuizQuestion {
-  if (q.type === 'multiple_choice') {
-    return {
-      questionId: q.questionId,
-      orderNo: q.orderNo,
-      questionText: q.questionText,
-      type: 'multiple_choice',
-      choices: (q.choices ?? []).map((c) => ({
-        choiceId: c.choiceId,
-        orderNo: c.orderNo,
-        choiceText: c.choiceText,
-      })),
+  switch (q.type) {
+    case 'multiple_choice':
+      return {
+        questionId: q.questionId,
+        orderNo: q.orderNo,
+        questionText: q.questionText,
+        type: 'multiple_choice',
+        choices: (q.choices ?? []).map((c) => ({
+          choiceId: c.choiceId,
+          orderNo: c.orderNo,
+          choiceText: c.choiceText,
+        })),
+      }
+    case 'code_blank':
+      return {
+        questionId: q.questionId,
+        orderNo: q.orderNo,
+        questionText: q.questionText,
+        type: 'code_blank',
+        codeSnippet: q.codeSnippet ?? '',
+      }
+    case 'short_answer':
+      return {
+        questionId: q.questionId,
+        orderNo: q.orderNo,
+        questionText: q.questionText,
+        type: 'short_answer',
+      }
+    default: {
+      // 새로운 문제 타입이 추가될 경우 컴파일 에러로 누락을 감지
+      const _exhaustive: never = q.type
+      throw new Error(`알 수 없는 문제 타입: ${String(_exhaustive)}`)
     }
-  }
-
-  if (q.type === 'code_blank') {
-    return {
-      questionId: q.questionId,
-      orderNo: q.orderNo,
-      questionText: q.questionText,
-      type: 'code_blank',
-      codeSnippet: q.codeSnippet ?? '',
-    }
-  }
-
-  return {
-    questionId: q.questionId,
-    orderNo: q.orderNo,
-    questionText: q.questionText,
-    type: 'short_answer',
   }
 }
 
@@ -115,9 +119,7 @@ function SubmitErrorToast({ onDismiss }: SubmitErrorToastProps) {
 // ─── QuizPage ────────────────────────────────────────────────────────────────
 
 type LoadPhase =
-  | { status: 'idle' }
-  | { status: 'starting' }
-  | { status: 'fetching'; attemptId: number }
+  | { status: 'loading' }
   | { status: 'ready'; attemptId: number; detail: QuizDetailResponse }
   | { status: 'submitting'; attemptId: number; detail: QuizDetailResponse }
   | { status: 'error'; message: string }
@@ -127,7 +129,7 @@ export function QuizPage() {
   const { quizId: quizIdParam } = useParams<{ quizId: string }>()
   const quizId = Number(quizIdParam)
 
-  const [phase, setPhase] = useState<LoadPhase>({ status: 'idle' })
+  const [phase, setPhase] = useState<LoadPhase>({ status: 'loading' })
   const [answers, setAnswers] = useState<QuizAnswers>({})
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showConfirmation, setShowConfirmation] = useState(false)
@@ -140,14 +142,16 @@ export function QuizPage() {
   const pendingAttemptRef = useRef<{ quizId: number; attemptId: number } | null>(null)
 
   // quizId 변경 시 이전 퀴즈 로컬 상태 전체 초기화 (렌더링 단계에서 처리)
+  // quizId가 유효하지 않을 때는 비교 자체를 건너뜀 (NaN !== NaN으로 무한 루프 방지)
   const [prevQuizId, setPrevQuizId] = useState(quizId)
-  if (quizId !== prevQuizId) {
+  if (Number.isFinite(quizId) && quizId > 0 && quizId !== prevQuizId) {
     setPrevQuizId(quizId)
     setAnswers({})
     setCurrentIndex(0)
     setShowConfirmation(false)
     setNotice(undefined)
     setShowSubmitError(false)
+    setPhase({ status: 'loading' })
   }
 
   useEffect(() => {
@@ -160,18 +164,16 @@ export function QuizPage() {
       let attemptId: number
 
       if (existing != null && existing.quizId === quizId) {
-        // 문제 조회 실패 후 재시도 — 기존 attemptId 재사용, start 단계 건너뛰엄
+        // 문제 조회 실패 후 재시도 — 기존 attemptId 재사용, start 단계 건너뜀
         attemptId = existing.attemptId
-        setPhase({ status: 'fetching', attemptId })
       } else {
-        setPhase({ status: 'starting' })
+        setPhase({ status: 'loading' })
 
         try {
           const { data: startResult } = await startQuizAttempt(quizId)
           if (cancelled) return
 
           attemptId = startResult.attemptId
-          setPhase({ status: 'fetching', attemptId })
         } catch {
           if (!cancelled) {
             setPhase({
@@ -208,9 +210,23 @@ export function QuizPage() {
     }
   }, [quizId, retryCount])
 
+  // ─── 유효하지 않은 quizId 조기 반환 (hooks 이후에 위치) ────────────────────────
+
+  if (!Number.isFinite(quizId) || quizId <= 0) {
+    return (
+      <div className="quiz-page quiz-page--error py-8 sm:py-10 lg:py-12" role="alert">
+        <div className="quiz-error-box">
+          <span className="quiz-error-icon" aria-hidden="true">⚠</span>
+          <h1 className="quiz-error-title">잘못된 퀴즈 접근입니다</h1>
+          <p className="quiz-error-message">올바른 경로로 다시 접속해 주세요.</p>
+        </div>
+      </div>
+    )
+  }
+
   // ─── 로딩 / 에러 단계 ──────────────────────────────────────────────────────
 
-  if (phase.status === 'idle' || phase.status === 'starting' || phase.status === 'fetching') {
+  if (phase.status === 'loading') {
     return <QuizLoadingScreen />
   }
 
@@ -275,6 +291,8 @@ export function QuizPage() {
   }
 
   async function confirmSubmit() {
+    // 이미 제출 중이면 중복 요청 차단
+    if (phase.status === 'submitting') return
     const submitQuizId = quizId
     setShowConfirmation(false)
     setPhase({ status: 'submitting', attemptId, detail })

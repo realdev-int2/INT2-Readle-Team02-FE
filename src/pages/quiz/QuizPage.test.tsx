@@ -43,7 +43,16 @@ describe('QuizPage', () => {
     expect(html).toContain('aria-live="polite"')
     expect(html).toContain('퀴즈를 불러오는 중입니다')
   })
+
+  it('유효하지 않은 quizId(문자열)면 에러 화면을 즉시 렌더링한다', () => {
+    const html = renderQuizPage('abc')
+
+    expect(html).toContain('잘못된 퀴즈 접근입니다')
+    expect(html).toContain('quiz-page--error')
+    expect(html).not.toContain('quiz-page--loading')
+  })
 })
+
 
 describe('quiz model', () => {
   it('공백 답안은 완료로 처리하지 않는다', () => {

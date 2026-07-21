@@ -6,7 +6,7 @@ GitHub Actions deploys only the immutable image digest produced by `publish-imag
 ghcr.io/<owner>/<repository>@sha256:<digest> <40-char-git-sha>
 ```
 
-The host script verifies that digest's `org.opencontainers.image.revision` label equals the SHA before it replaces `readle-frontend`.
+The host script verifies that digest's `org.opencontainers.image.revision` label equals the SHA, starts `readle-frontend-candidate` for non-routing preflight, then replaces the single live `readle-frontend`.
 
 ## Install
 
@@ -57,6 +57,16 @@ sudo curl --max-time 5 -fsS http://127.0.0.1/
 
 Edge Nginx must proxy `/` to `readle-frontend:8080` on `readle-public`.
 
+## State
+
+`/var/lib/readle/frontend-deploy.env` records deployment state:
+
+- `last_good_image`, `last_good_revision`, `last_good_ref`: current last-good live frontend state.
+- `previous_image`, `previous_revision`, `previous_ref`: durable previous frontend state for manual rollback.
+- `pending_rollback_image`, `pending_rollback_revision`, `pending_rollback_ref`: automatic cutover rollback state only. The deploy script sets it immediately before live replacement and clears it after success or rollback.
+
+Do not use `pending_rollback_*` as manual deploy input.
+
 ## Manual Deploy Or Rollback
 
 Deploy a pinned image:
@@ -77,7 +87,7 @@ sudo podman logs --tail=200 readle-nginx
 sudo curl --max-time 5 -fsS http://127.0.0.1/
 ```
 
-Rollback uses `pending_rollback_image` automatically after a failed cutover. Those state image IDs are internal automatic-rollback data, not manual deploy inputs. For a manual rollback, choose an explicit prior GHCR digest and matching SHA from release or workflow history, then run the deploy command with that digest/SHA pair.
+Automatic rollback uses `pending_rollback_*` only during a failed cutover. For manual rollback, use `previous_ref` and `previous_revision` only when `previous_ref` is a GHCR immutable digest. If it is a local image ID, obtain the matching digest and SHA from release or workflow history.
 
 To disable production deploys, disable or delete the production deploy workflow/job in the GitHub UI.
 
@@ -85,4 +95,4 @@ To disable production deploys, disable or delete the production deploy workflow/
 
 The workflow serializes production deployments, but close `main` pushes can collapse to the latest pending run. It does not guarantee every commit deploys in order.
 
-This is a single-container replacement. Expect short downtime while `readle-frontend` and `readle-nginx` restart.
+This is a non-routing candidate preflight followed by single-live replacement. Expect short downtime while `readle-frontend` and `readle-nginx` restart.

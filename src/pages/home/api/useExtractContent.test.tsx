@@ -95,11 +95,11 @@ describe('useExtractContent', () => {
   })
 
   it('요청 중에는 isPending 상태가 true로 유지되고 완료 후 false로 변경되어야 한다', async () => {
-    let resolveExtract: (value: any) => void
+    let resolveExtract: (value: unknown) => void
     const extractPromise = new Promise((resolve) => {
       resolveExtract = resolve
     })
-    vi.mocked(contentApi.extractContent).mockReturnValueOnce(extractPromise as any)
+    vi.mocked(contentApi.extractContent).mockReturnValueOnce(extractPromise as ReturnType<typeof contentApi.extractContent>)
 
     const { result } = renderHook(() => useExtractContent(), { wrapper })
     

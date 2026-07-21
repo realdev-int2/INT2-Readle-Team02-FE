@@ -57,6 +57,9 @@ save_state() {
     printf 'last_good_image=%s\n' "${last_good_image:-}"
     printf 'last_good_revision=%s\n' "${last_good_revision:-}"
     printf 'last_good_ref=%s\n' "${last_good_ref:-}"
+    printf 'previous_image=%s\n' "${previous_image:-}"
+    printf 'previous_revision=%s\n' "${previous_revision:-}"
+    printf 'previous_ref=%s\n' "${previous_ref:-}"
     printf 'pending_rollback_image=%s\n' "${pending_rollback_image:-}"
     printf 'pending_rollback_revision=%s\n' "${pending_rollback_revision:-}"
     printf 'pending_rollback_ref=%s\n' "${pending_rollback_ref:-}"
@@ -73,6 +76,9 @@ load_state() {
   local have_last_good_image=0
   local have_last_good_revision=0
   local have_last_good_ref=0
+  local have_previous_image=0
+  local have_previous_revision=0
+  local have_previous_ref=0
   local have_pending_rollback_image=0
   local have_pending_rollback_revision=0
   local have_pending_rollback_ref=0
@@ -80,6 +86,9 @@ load_state() {
   last_good_image=""
   last_good_revision=""
   last_good_ref=""
+  previous_image=""
+  previous_revision=""
+  previous_ref=""
   pending_rollback_image=""
   pending_rollback_revision=""
   pending_rollback_ref=""
@@ -108,6 +117,27 @@ load_state() {
         last_good_ref="$value"
         have_last_good_ref=1
         ;;
+      previous_image=*)
+        [[ "$have_previous_image" == 0 ]] || return 1
+        value="${line#previous_image=}"
+        validate_optional_image_id "$value" || return 1
+        previous_image="$value"
+        have_previous_image=1
+        ;;
+      previous_revision=*)
+        [[ "$have_previous_revision" == 0 ]] || return 1
+        value="${line#previous_revision=}"
+        [[ -z "$value" ]] || validate_sha "$value" || return 1
+        previous_revision="$value"
+        have_previous_revision=1
+        ;;
+      previous_ref=*)
+        [[ "$have_previous_ref" == 0 ]] || return 1
+        value="${line#previous_ref=}"
+        validate_optional_deploy_ref "$value" || return 1
+        previous_ref="$value"
+        have_previous_ref=1
+        ;;
       pending_rollback_image=*)
         [[ "$have_pending_rollback_image" == 0 ]] || return 1
         value="${line#pending_rollback_image=}"
@@ -133,6 +163,14 @@ load_state() {
     esac
   done < "$STATE_FILE"
 
+  [[ "$have_previous_image$have_previous_revision$have_previous_ref" == "000" || \
+    "$have_previous_image$have_previous_revision$have_previous_ref" == "111" ]] || return 1
+  if [[ -n "$previous_image" || -n "$previous_revision" || -n "$previous_ref" ]]; then
+    [[ -n "$previous_image" && -n "$previous_revision" && -n "$previous_ref" ]] || return 1
+  fi
+  if [[ -n "$pending_rollback_image" || -n "$pending_rollback_revision" || -n "$pending_rollback_ref" ]]; then
+    [[ -n "$pending_rollback_image" && -n "$pending_rollback_revision" && -n "$pending_rollback_ref" ]] || return 1
+  fi
   [[ "$have_last_good_image" == 1 && "$have_last_good_revision" == 1 && "$have_last_good_ref" == 1 && \
     "$have_pending_rollback_image" == 1 && "$have_pending_rollback_revision" == 1 && "$have_pending_rollback_ref" == 1 ]]
 }
@@ -228,8 +266,13 @@ candidate_root_check() {
   podman_cmd exec "$CANDIDATE" wget -q -O /dev/null http://127.0.0.1:8080/
 }
 
+candidate_preflight() {
+  wait_healthy "$CANDIDATE" || { podman_cmd rm -f "$CANDIDATE" >/dev/null; die "candidate did not become healthy"; }
+  candidate_root_check || { podman_cmd rm -f "$CANDIDATE" >/dev/null; die "candidate root check failed"; }
+}
+
 run_candidate() {
-  podman_cmd run -d --name "$CANDIDATE" --network "$NETWORK" "$1" >/dev/null
+  podman_cmd run -d --name "$CANDIDATE" --network "$NETWORK" --memory=192m "$1" >/dev/null
 }
 
 run_live() {
@@ -237,7 +280,7 @@ run_live() {
   local image="$2"
   local deploy_ref="$3"
   podman_cmd run -d --restart=always --name "$name" --network "$NETWORK" \
-    --label "$DEPLOY_LABEL=$deploy_ref" "$image" >/dev/null
+    --memory=192m --label "$DEPLOY_LABEL=$deploy_ref" "$image" >/dev/null
 }
 
 replace_live() {
@@ -257,6 +300,18 @@ clear_pending() {
   pending_rollback_image=""
   pending_rollback_revision=""
   pending_rollback_ref=""
+}
+
+promote_pending_rollback_to_previous() {
+  [[ -n "$pending_rollback_image" && -n "$pending_rollback_revision" && -n "$pending_rollback_ref" ]] || return 1
+  previous_image="$pending_rollback_image"
+  previous_revision="$pending_rollback_revision"
+  previous_ref="$pending_rollback_ref"
+}
+
+promote_complete_pending_rollback_to_previous() {
+  [[ -n "${pending_rollback_image:-}" && -n "${pending_rollback_revision:-}" && -n "${pending_rollback_ref:-}" ]] || return 0
+  promote_pending_rollback_to_previous
 }
 
 restore_image() {
@@ -288,7 +343,7 @@ restore_image() {
 }
 
 self_test() {
-  local good_sha good_digest good_image_id raw_good_image_id lock_probe original_repository_file original_state repository_file state_file
+  local good_sha good_digest good_image_id raw_good_image_id lock_probe original_repository_file original_state repository_file run_log state_file
 
   (
     lock_probe="$(mktemp)"
@@ -318,6 +373,104 @@ self_test() {
   validate_image_ref "$good_digest"
   ! validate_image_ref "ghcr.io/other/int2-readle-team02-fe@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   ! validate_image_ref "${IMAGE_PREFIX}:main"
+
+  original_state="$STATE_FILE"
+  state_file="$(mktemp)"
+  STATE_FILE="$state_file"
+  printf '%s\n' \
+    "last_good_image=$raw_good_image_id" \
+    "last_good_revision=$good_sha" \
+    "last_good_ref=$good_digest" \
+    'pending_rollback_image=' \
+    'pending_rollback_revision=' \
+    'pending_rollback_ref=' > "$STATE_FILE"
+  load_state
+  [[ "$last_good_image" == "$raw_good_image_id" ]]
+  [[ -z "$previous_image" && -z "$previous_revision" && -z "$previous_ref" ]]
+  printf '%s\n' \
+    "last_good_image=$good_image_id" \
+    "last_good_revision=$good_sha" \
+    "last_good_ref=$good_digest" \
+    "previous_image=$raw_good_image_id" \
+    "previous_revision=$good_sha" \
+    "previous_ref=$good_digest" \
+    'pending_rollback_image=' \
+    'pending_rollback_revision=' \
+    'pending_rollback_ref=' > "$STATE_FILE"
+  load_state
+  [[ "$previous_image" == "$raw_good_image_id" && "$previous_revision" == "$good_sha" && "$previous_ref" == "$good_digest" ]]
+  printf '%s\n' \
+    "last_good_image=$good_image_id" \
+    "last_good_revision=$good_sha" \
+    "last_good_ref=$good_digest" \
+    "previous_image=$raw_good_image_id" \
+    'previous_revision=' \
+    'previous_ref=' \
+    'pending_rollback_image=' \
+    'pending_rollback_revision=' \
+    'pending_rollback_ref=' > "$STATE_FILE"
+  ! load_state
+  printf '%s\n' \
+    "last_good_image=$good_image_id" \
+    "last_good_revision=$good_sha" \
+    "last_good_ref=$good_digest" \
+    "previous_image=$raw_good_image_id" \
+    'pending_rollback_image=' \
+    'pending_rollback_revision=' \
+    'pending_rollback_ref=' > "$STATE_FILE"
+  ! load_state
+  printf '%s\n' \
+    "last_good_image=$good_image_id" \
+    "last_good_revision=$good_sha" \
+    "last_good_ref=$good_digest" \
+    'pending_rollback_image=sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd' \
+    'pending_rollback_revision=' \
+    'pending_rollback_ref=' > "$STATE_FILE"
+  ! load_state
+  last_good_image="sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  last_good_revision="1111111111111111111111111111111111111111"
+  last_good_ref="${IMAGE_PREFIX}@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  pending_rollback_image="$good_image_id"
+  pending_rollback_revision="$good_sha"
+  pending_rollback_ref="$good_digest"
+  promote_pending_rollback_to_previous
+  last_good_image="$raw_good_image_id"
+  last_good_revision="$good_sha"
+  last_good_ref="$good_digest"
+  clear_pending
+  save_state
+  grep -qx "previous_image=$good_image_id" "$STATE_FILE"
+  grep -qx "previous_revision=$good_sha" "$STATE_FILE"
+  grep -qx "previous_ref=$good_digest" "$STATE_FILE"
+  pending_rollback_image="$good_image_id"
+  pending_rollback_revision=""
+  pending_rollback_ref=""
+  ! promote_pending_rollback_to_previous
+  [[ "$previous_image" == "$good_image_id" && "$previous_revision" == "$good_sha" && "$previous_ref" == "$good_digest" ]]
+  previous_image="sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  previous_revision="2222222222222222222222222222222222222222"
+  previous_ref="${IMAGE_PREFIX}@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  pending_rollback_image="sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  pending_rollback_revision="3333333333333333333333333333333333333333"
+  pending_rollback_ref="${IMAGE_PREFIX}@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  promote_complete_pending_rollback_to_previous
+  clear_pending
+  [[ "$previous_image" == "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ]]
+  [[ "$previous_revision" == "3333333333333333333333333333333333333333" ]]
+  [[ "$previous_ref" == "${IMAGE_PREFIX}@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ]]
+  previous_image="sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  previous_revision="2222222222222222222222222222222222222222"
+  previous_ref="${IMAGE_PREFIX}@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  pending_rollback_image=""
+  pending_rollback_revision=""
+  pending_rollback_ref=""
+  promote_complete_pending_rollback_to_previous
+  clear_pending
+  [[ "$previous_image" == "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" ]]
+  [[ "$previous_revision" == "2222222222222222222222222222222222222222" ]]
+  [[ "$previous_ref" == "${IMAGE_PREFIX}@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" ]]
+  rm -f "$state_file"
+  STATE_FILE="$original_state"
 
   pending_rollback_image="old"
   live_requested_healthy() { [[ "${SELFTEST_LIVE_HEALTHY:-0}" == "1" && "$1" == "$good_digest" ]]; }
@@ -392,9 +545,44 @@ self_test() {
     SELFTEST_PULLED="$2"
   }
   replace_live() { [[ "$1" == "$good_digest" && "$2" == "$good_digest" ]]; }
+  previous_image="$good_image_id"
+  previous_revision="$good_sha"
+  previous_ref="$good_digest"
   SELFTEST_PULLED=""
   restore_image "$good_image_id" "$good_sha" "$good_digest"
   [[ "$SELFTEST_PULLED" == "$good_digest" ]]
+  [[ "$previous_image" == "$good_image_id" && "$previous_revision" == "$good_sha" && "$previous_ref" == "$good_digest" ]]
+
+  run_log="$(mktemp)"
+  podman_cmd() {
+    [[ "$1" == "run" ]] || return 1
+    printf '%s\n' "$*" >> "$run_log"
+  }
+  run_candidate "$good_digest"
+  run_live "$LIVE" "$good_digest" "$good_digest"
+  grep -q -- "--name $CANDIDATE .* --memory=192m " "$run_log"
+  grep -q -- "--name $LIVE .* --memory=192m " "$run_log"
+  rm -f "$run_log"
+
+  run_log="$(mktemp)"
+  podman_cmd() {
+    [[ "$1" == "rm" && "$2" == "-f" && "$3" == "$CANDIDATE" ]] || return 1
+    printf '%s\n' "$*" >> "$run_log"
+  }
+  wait_healthy() { return 1; }
+  candidate_root_check() { return 0; }
+  ! ( candidate_preflight )
+  grep -qx "rm -f $CANDIDATE" "$run_log"
+  : > "$run_log"
+  wait_healthy() { return 0; }
+  candidate_root_check() { return 1; }
+  ! ( candidate_preflight )
+  grep -qx "rm -f $CANDIDATE" "$run_log"
+  : > "$run_log"
+  candidate_root_check() { return 0; }
+  candidate_preflight
+  [[ ! -s "$run_log" ]]
+  rm -f "$run_log"
 
   rm -f "$repository_file"
   unset IMAGE_PREFIX
@@ -424,6 +612,7 @@ main() {
     last_good_image="$(container_image_id "$LIVE")"
     last_good_revision="$expected_sha"
     last_good_ref="$(container_deploy_ref "$LIVE")"
+    promote_complete_pending_rollback_to_previous
     clear_pending
     save_state
     return
@@ -444,8 +633,7 @@ main() {
   [[ "$(image_revision "$image_ref")" == "$expected_sha" ]] || die "image revision label does not match expected SHA"
 
   run_candidate "$image_ref"
-  wait_healthy "$CANDIDATE" || die "candidate did not become healthy"
-  candidate_root_check || die "candidate root check failed"
+  candidate_preflight
 
   pending_rollback_image="$(container_image_id "$LIVE")"
   pending_rollback_revision="$(container_revision "$LIVE" 2>/dev/null || true)"
@@ -465,6 +653,7 @@ main() {
     die "post-cutover failed; rolled back"
   fi
 
+  promote_pending_rollback_to_previous
   last_good_image="$(container_image_id "$LIVE")"
   last_good_revision="$expected_sha"
   last_good_ref="$image_ref"

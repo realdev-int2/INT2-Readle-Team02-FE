@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { generatePath, useNavigate, useParams } from 'react-router'
 import {
   fetchQuizAttemptDetail,
@@ -133,36 +133,43 @@ export function QuizPage() {
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [notice, setNotice] = useState<string>()
   const [showSubmitError, setShowSubmitError] = useState(false)
-
-  // 중복 시작 방지용 ref
-  const isStartingRef = useRef(false)
-
-  const loadQuiz = useCallback(async () => {
-    if (isStartingRef.current) return
-    isStartingRef.current = true
-
-    setPhase({ status: 'starting' })
-
-    try {
-      const startResult = await startQuizAttempt(quizId)
-      const attemptId = startResult.attemptId
-      setPhase({ status: 'fetching', attemptId })
-
-      const detail = await fetchQuizAttemptDetail(attemptId)
-      setPhase({ status: 'ready', attemptId, detail })
-    } catch {
-      setPhase({
-        status: 'error',
-        message: '퀴즈 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.',
-      })
-    } finally {
-      isStartingRef.current = false
-    }
-  }, [quizId])
+  // 재시도 트리거 — increment하면 effect가 재실행됨
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
+    let cancelled = false
+
+    async function loadQuiz() {
+      setPhase({ status: 'starting' })
+
+      try {
+        const startResult = await startQuizAttempt(quizId)
+        if (cancelled) return
+
+        const attemptId = startResult.attemptId
+        setPhase({ status: 'fetching', attemptId })
+
+        const detail = await fetchQuizAttemptDetail(attemptId)
+        if (cancelled) return
+
+        setPhase({ status: 'ready', attemptId, detail })
+      } catch {
+        if (!cancelled) {
+          setPhase({
+            status: 'error',
+            message: '퀴즈 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+          })
+        }
+      }
+    }
+
     void loadQuiz()
-  }, [loadQuiz])
+
+    // quizId 변경 또는 컴포넌트 언마운트 시 이전 요청 결과를 무시
+    return () => {
+      cancelled = true
+    }
+  }, [quizId, retryCount])
 
   // ─── 로딩 / 에러 단계 ──────────────────────────────────────────────────────
 
@@ -174,9 +181,7 @@ export function QuizPage() {
     return (
       <QuizErrorScreen
         message={phase.message}
-        onRetry={() => {
-          void loadQuiz()
-        }}
+        onRetry={() => setRetryCount((c) => c + 1)}
       />
     )
   }
@@ -186,6 +191,22 @@ export function QuizPage() {
   const { attemptId, detail } = phase
   const questions: QuizQuestion[] = detail.questions.map(toQuizQuestion)
   const questionCount = questions.length
+
+  // 서버가 빈 문항 배열을 반환한 경우 (AI 생성 실패 등)
+  if (questionCount === 0) {
+    return (
+      <div className="quiz-page quiz-page--error py-8 sm:py-10 lg:py-12" role="alert">
+        <div className="quiz-error-box">
+          <span className="quiz-error-icon" aria-hidden="true">📭</span>
+          <h1 className="quiz-error-title">생성된 문제가 없습니다</h1>
+          <p className="quiz-error-message">
+            콘텐츠에서 퀴즈 문제를 만들 수 없었습니다. 다른 콘텐츠로 다시 시도해 주세요.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const question = questions[currentIndex]
   const answeredCount = getAnsweredCount(questions, answers)
   const unansweredCount = questionCount - answeredCount

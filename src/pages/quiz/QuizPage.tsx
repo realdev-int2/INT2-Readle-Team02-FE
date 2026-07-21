@@ -137,30 +137,31 @@ export function QuizPage() {
   const [retryCount, setRetryCount] = useState(0)
 
   // fetchQuizAttemptDetail 실패 시 attemptId 보존 — 재시도 시 startQuizAttempt를 건너뛰엄
-  const pendingAttemptIdRef = useRef<number | null>(null)
+  const pendingAttemptRef = useRef<{ quizId: number; attemptId: number } | null>(null)
 
-  // quizId 변경 시 이전 퀴즈 로컈 상태 전체 초기화
-  useEffect(() => {
-    pendingAttemptIdRef.current = null
+  // quizId 변경 시 이전 퀴즈 로컬 상태 전체 초기화 (렌더링 단계에서 처리)
+  const [prevQuizId, setPrevQuizId] = useState(quizId)
+  if (quizId !== prevQuizId) {
+    setPrevQuizId(quizId)
     setAnswers({})
     setCurrentIndex(0)
     setShowConfirmation(false)
     setNotice(undefined)
     setShowSubmitError(false)
-  }, [quizId])
+  }
 
   useEffect(() => {
     let cancelled = false
 
     async function loadQuiz() {
-      const existingAttemptId = pendingAttemptIdRef.current
-      pendingAttemptIdRef.current = null
+      const existing = pendingAttemptRef.current
+      pendingAttemptRef.current = null
 
       let attemptId: number
 
-      if (existingAttemptId != null) {
+      if (existing != null && existing.quizId === quizId) {
         // 문제 조회 실패 후 재시도 — 기존 attemptId 재사용, start 단계 건너뛰엄
-        attemptId = existingAttemptId
+        attemptId = existing.attemptId
         setPhase({ status: 'fetching', attemptId })
       } else {
         setPhase({ status: 'starting' })
@@ -190,7 +191,7 @@ export function QuizPage() {
       } catch {
         if (!cancelled) {
           // 다음 재시도 시 start를 건너뛰고 fetch부터 재개
-          pendingAttemptIdRef.current = attemptId
+          pendingAttemptRef.current = { quizId, attemptId }
           setPhase({
             status: 'error',
             message: '문제를 불러오는 데 실패했습니다. 잠시 후 다시 시도해 주세요.',
@@ -274,6 +275,7 @@ export function QuizPage() {
   }
 
   async function confirmSubmit() {
+    const submitQuizId = quizId
     setShowConfirmation(false)
     setPhase({ status: 'submitting', attemptId, detail })
     setShowSubmitError(false)
@@ -281,8 +283,10 @@ export function QuizPage() {
     try {
       const submitRequest = formatAnswersForSubmit(detail.questions, answers)
       const { data: result } = await submitQuizAttempt(attemptId, submitRequest)
+      if (submitQuizId !== quizId) return
       void navigate(generatePath(ROUTES.grading, { attemptId: String(result.attemptId) }))
     } catch {
+      if (submitQuizId !== quizId) return
       setShowSubmitError(true)
       // 제출 실패 시 ready 상태로 복귀해 사용자가 다시 제출할 수 있도록 함
       setPhase({ status: 'ready', attemptId, detail })

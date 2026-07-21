@@ -117,3 +117,13 @@ a {
   background: rgb(76 131 255 / 0.32);
   color: var(--color-text-primary);
 }
+
+/* 크롬 자동완성(Autofill) 시 강제로 들어가는 배경색/글자색을 다크 테마에 맞게 오버라이드 */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--color-text-primary) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--color-surface-panel) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}

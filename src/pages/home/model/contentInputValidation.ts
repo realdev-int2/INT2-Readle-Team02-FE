@@ -31,20 +31,21 @@ export function isValidLearningUrl(value: string) {
 export function validateContentInput(
   mode: InputMode,
   values: ContentInputValues,
+  isExtracted = false,
 ): ContentInputErrors {
+  const errors: ContentInputErrors = {}
+
   if (mode === 'url') {
     if (!values.url.trim()) {
-      return { url: '학습할 기술 아티클 URL을 입력해 주세요.' }
+      errors.url = '학습할 기술 아티클 URL을 입력해 주세요.'
+    } else if (!isValidLearningUrl(values.url.trim())) {
+      errors.url = 'http:// 또는 https://로 시작하는 올바른 URL을 입력해 주세요.'
     }
 
-    if (!isValidLearningUrl(values.url.trim())) {
-      return { url: 'http:// 또는 https://로 시작하는 올바른 URL을 입력해 주세요.' }
+    if (!isExtracted) {
+      return errors
     }
-
-    return {}
   }
-
-  const errors: ContentInputErrors = {}
 
   if (!values.title.trim()) {
     errors.title = '콘텐츠 제목을 입력해 주세요.'

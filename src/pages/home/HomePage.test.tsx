@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router'
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HomePage } from '@/pages/home/HomePage'
 import {
@@ -29,6 +29,10 @@ function createTestQueryClient() {
 describe('HomePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    cleanup()
   })
 
   it('콘텐츠 입력의 핵심 UI를 렌더링한다', () => {
@@ -73,6 +77,18 @@ describe('HomePage', () => {
         url: 'https://tech.example.com/article',
       }),
     ).toEqual({})
+
+    // isExtracted === true일 때 제목과 본문 검증 추가
+    expect(
+      validateContentInput(
+        'url',
+        { content: '', title: '', url: 'https://tech.example.com/article' },
+        true,
+      ),
+    ).toEqual({
+      content: '학습할 기술 콘텐츠를 입력해 주세요.',
+      title: '콘텐츠 제목을 입력해 주세요.',
+    })
   })
 
   it('텍스트 입력에서 제목과 본문을 모두 요구한다', () => {
@@ -90,7 +106,7 @@ describe('HomePage', () => {
   })
 
   describe('URL 추출 동작 통합 테스트', () => {
-    it('유효한 URL을 입력하고 제출하면 추출된 내용이 텍스트 모드에 주입된다', async () => {
+    it('유효한 URL을 입력하고 제출하면 같은 탭에서 폼이 확장되고 내용이 주입된다', async () => {
       vi.mocked(contentApi.extractContent).mockResolvedValueOnce({
         ...mockExtractedContent,
       })
@@ -113,7 +129,13 @@ describe('HomePage', () => {
       const submitButton = screen.getByRole('button', { name: '본문 불러오기' })
       await user.click(submitButton)
 
-      // 추출 성공 후 텍스트 입력 탭으로 전환되고 내용이 입력되었는지 확인
+      // 추출 성공 후 같은 탭(url)을 유지하면서 성공 메시지와 폼 렌더링 확인
+      const successMessage = await screen.findByText(/성공적으로 불러왔습니다/)
+      expect(successMessage).toBeInTheDocument()
+
+      const urlTab = screen.getByRole('tab', { name: /URL 가져오기/ })
+      expect(urlTab).toHaveAttribute('aria-selected', 'true')
+
       const nextButton = await screen.findByRole('button', { name: /분석하고 퀴즈 만들기/ })
       expect(nextButton).toBeInTheDocument()
 
@@ -122,6 +144,16 @@ describe('HomePage', () => {
 
       expect(titleInput).toHaveValue(mockExtractedContent.title)
       expect(contentTextarea).toHaveValue(mockExtractedContent.content)
+      expect(urlInput).toBeDisabled()
+
+      // 다시 입력 버튼 동작 확인
+      const resetButton = screen.getByRole('button', { name: '다시 입력' })
+      await user.click(resetButton)
+
+      expect(urlInput).not.toBeDisabled()
+      expect(urlInput).toHaveValue('')
+      expect(screen.queryByText(/성공적으로 불러왔습니다/)).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '본문 불러오기' })).toBeInTheDocument()
     })
 
     it('추출 실패 시 에러 메시지를 렌더링한다', async () => {

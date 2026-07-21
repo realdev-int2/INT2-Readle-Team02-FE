@@ -10,16 +10,12 @@ import {
   registerAuthHandlers,
   setAccessToken,
 } from '@/shared/api/client'
-import { ApiError } from '@/shared/api/error'
+import { ApiError, isSessionExpired } from '@/shared/api/error'
 import type { Member } from '@/shared/api'
 import { AuthContext } from '@/app/providers/AuthContext'
 
 interface AuthProviderProps {
   children: ReactNode
-}
-
-function isSessionExpired(error: unknown) {
-  return error instanceof ApiError && error.status === 401 && error.code === 'INVALID_REFRESH_TOKEN'
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

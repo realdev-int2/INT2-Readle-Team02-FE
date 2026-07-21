@@ -24,6 +24,10 @@ export class ApiError extends Error {
   }
 }
 
+export function isSessionExpired(error: unknown) {
+  return error instanceof ApiError && error.status === 401 && error.code === 'INVALID_REFRESH_TOKEN'
+}
+
 export function isApiErrorBody(value: unknown): value is ApiErrorBody {
   if (!value || typeof value !== 'object' || !('error' in value)) {
     return false

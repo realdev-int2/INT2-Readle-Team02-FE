@@ -1,4 +1,4 @@
-import { ApiError, isApiErrorBody } from '@/shared/api/error'
+import { ApiError, isApiErrorBody, isSessionExpired } from '@/shared/api/error'
 
 export const API_PREFIX = '/api'
 
@@ -104,11 +104,7 @@ async function refreshForProtectedRequest() {
       .refresh()
       .then(() => true)
       .catch((error: unknown) => {
-        if (
-          error instanceof ApiError &&
-          error.status === 401 &&
-          error.code === 'INVALID_REFRESH_TOKEN'
-        ) {
+        if (isSessionExpired(error)) {
           handlers.invalidate('session_expired')
           return false
         }

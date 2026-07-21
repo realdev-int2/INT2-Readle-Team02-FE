@@ -143,13 +143,13 @@ export function QuizPage() {
       setPhase({ status: 'starting' })
 
       try {
-        const startResult = await startQuizAttempt(quizId)
+        const { data: startResult } = await startQuizAttempt(quizId)
         if (cancelled) return
 
         const attemptId = startResult.attemptId
         setPhase({ status: 'fetching', attemptId })
 
-        const detail = await fetchQuizAttemptDetail(attemptId)
+        const { data: detail } = await fetchQuizAttemptDetail(attemptId)
         if (cancelled) return
 
         setPhase({ status: 'ready', attemptId, detail })
@@ -244,7 +244,7 @@ export function QuizPage() {
 
     try {
       const submitRequest = formatAnswersForSubmit(detail.questions, answers)
-      const result = await submitQuizAttempt(attemptId, submitRequest)
+      const { data: result } = await submitQuizAttempt(attemptId, submitRequest)
       void navigate(generatePath(ROUTES.grading, { attemptId: String(result.attemptId) }))
     } catch {
       setShowSubmitError(true)

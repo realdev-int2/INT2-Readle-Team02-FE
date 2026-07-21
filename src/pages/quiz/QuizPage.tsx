@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { generatePath, useNavigate, useParams } from 'react-router'
 import {
   fetchQuizAttemptDetail,
@@ -136,28 +136,64 @@ export function QuizPage() {
   // 재시도 트리거 — increment하면 effect가 재실행됨
   const [retryCount, setRetryCount] = useState(0)
 
+  // fetchQuizAttemptDetail 실패 시 attemptId 보존 — 재시도 시 startQuizAttempt를 건너뛰엄
+  const pendingAttemptIdRef = useRef<number | null>(null)
+
+  // quizId 변경 시 이전 퀴즈 로컈 상태 전체 초기화
+  useEffect(() => {
+    pendingAttemptIdRef.current = null
+    setAnswers({})
+    setCurrentIndex(0)
+    setShowConfirmation(false)
+    setNotice(undefined)
+    setShowSubmitError(false)
+  }, [quizId])
+
   useEffect(() => {
     let cancelled = false
 
     async function loadQuiz() {
-      setPhase({ status: 'starting' })
+      const existingAttemptId = pendingAttemptIdRef.current
+      pendingAttemptIdRef.current = null
+
+      let attemptId: number
+
+      if (existingAttemptId != null) {
+        // 문제 조회 실패 후 재시도 — 기존 attemptId 재사용, start 단계 건너뛰엄
+        attemptId = existingAttemptId
+        setPhase({ status: 'fetching', attemptId })
+      } else {
+        setPhase({ status: 'starting' })
+
+        try {
+          const { data: startResult } = await startQuizAttempt(quizId)
+          if (cancelled) return
+
+          attemptId = startResult.attemptId
+          setPhase({ status: 'fetching', attemptId })
+        } catch {
+          if (!cancelled) {
+            setPhase({
+              status: 'error',
+              message: '퀴즈를 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+            })
+          }
+          return
+        }
+      }
 
       try {
-        const { data: startResult } = await startQuizAttempt(quizId)
-        if (cancelled) return
-
-        const attemptId = startResult.attemptId
-        setPhase({ status: 'fetching', attemptId })
-
         const { data: detail } = await fetchQuizAttemptDetail(attemptId)
         if (cancelled) return
 
         setPhase({ status: 'ready', attemptId, detail })
       } catch {
         if (!cancelled) {
+          // 다음 재시도 시 start를 건너뛰고 fetch부터 재개
+          pendingAttemptIdRef.current = attemptId
           setPhase({
             status: 'error',
-            message: '퀴즈 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+            message: '문제를 불러오는 데 실패했습니다. 잠시 후 다시 시도해 주세요.',
           })
         }
       }

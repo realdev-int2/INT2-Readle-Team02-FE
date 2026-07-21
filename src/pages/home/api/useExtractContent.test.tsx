@@ -93,4 +93,34 @@ describe('useExtractContent', () => {
       status: 422,
     })
   })
+
+  it('요청 중에는 isPending 상태가 true로 유지되고 완료 후 false로 변경되어야 한다', async () => {
+    let resolveExtract: (value: any) => void
+    const extractPromise = new Promise((resolve) => {
+      resolveExtract = resolve
+    })
+    vi.mocked(contentApi.extractContent).mockReturnValueOnce(extractPromise as any)
+
+    const { result } = renderHook(() => useExtractContent(), { wrapper })
+    
+    // 실행 전
+    expect(result.current.isPending).toBe(false)
+    
+    result.current.mutate({ url: 'https://example.com/loading' })
+
+    // 실행 중
+    await waitFor(() => {
+      expect(result.current.isPending).toBe(true)
+    })
+
+    // 통신 완료
+    resolveExtract!({ ...mockExtractedContent })
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true)
+    })
+
+    // 처리 완료 후
+    expect(result.current.isPending).toBe(false)
+  })
 })

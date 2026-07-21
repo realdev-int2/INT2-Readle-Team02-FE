@@ -46,7 +46,7 @@ export function QuizPage() {
       const currentUnansweredCount = quiz.questionCount - currentAnsweredCount
 
       setCurrentIndex(firstUnansweredIndex)
-      setNotice(`아직 답하지 않은 문제가 ${currentUnansweredCount}개 있습니다.`)
+      setNotice(`아직 답하지 않은 문제가 ${currentUnansweredCount}개 있습니다. 첫 번째 미응답 문제로 이동했습니다.`)
       return
     }
 

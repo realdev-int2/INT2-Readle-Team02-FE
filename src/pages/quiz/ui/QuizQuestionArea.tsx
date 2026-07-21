@@ -32,7 +32,7 @@ function MultipleChoiceAnswer({
   return (
     <fieldset className="quiz-choice-list">
       <legend className="sr-only">답안 선택</legend>
-      {question.choices?.map((choice) => {
+      {question.choices.map((choice) => {
         const checked = answer === choice.choiceId
 
         return (
@@ -55,6 +55,17 @@ function MultipleChoiceAnswer({
         )
       })}
     </fieldset>
+  )
+}
+
+function AnswerLengthHelper({ length, max, message }: { length: number; max: number; message: string }) {
+  return (
+    <div className="quiz-answer-helper">
+      <span>{message}</span>
+      <span className="font-mono">
+        {length}/{max}
+      </span>
+    </div>
   )
 }
 
@@ -114,10 +125,7 @@ function TextAnswer({
             />
           </div>
         </div>
-        <div className="quiz-answer-helper">
-          <span>대소문자와 공백을 확인해 주세요.</span>
-          <span className="font-mono">{value.length}/100</span>
-        </div>
+        <AnswerLengthHelper length={value.length} max={100} message="대소문자와 공백을 확인해 주세요." />
       </div>
     )
   }
@@ -135,10 +143,7 @@ function TextAnswer({
         placeholder="핵심 개념을 중심으로 답변해 주세요"
         value={value}
       />
-      <div className="quiz-answer-helper">
-        <span>100자 이내로 간결하게 작성해 주세요.</span>
-        <span className="font-mono">{value.length}/100</span>
-      </div>
+      <AnswerLengthHelper length={value.length} max={100} message="100자 이내로 간결하게 작성해 주세요." />
     </div>
   )
 }
@@ -206,7 +211,7 @@ export function QuizQuestionArea({
 
         {notice && (
           <p className="quiz-notice" role="alert">
-            {notice} 첫 번째 미응답 문제로 이동했습니다.
+            {notice}
           </p>
         )}
 

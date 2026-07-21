@@ -11,11 +11,9 @@ const REQUESTED_AT = '2026-07-14T10:00:00+09:00'
 const VALIDATED_AT = '2026-07-14T10:00:03+09:00'
 
 export const mockExtractedContent: ExtractContentResponse = {
-  sourceUrl: 'https://example.com/spring-transaction',
   title: 'Spring Transaction 완전 정복',
-  extractedText:
+  content:
     'Spring의 @Transactional은 선언적 트랜잭션 관리의 핵심 기능입니다. 이 글에서는 트랜잭션 경계와 전파 속성을 설명합니다.',
-  crawlStatus: 'success',
 }
 
 export const mockCreatedContent: CreateContentResponse = {

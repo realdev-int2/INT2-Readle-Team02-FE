@@ -33,10 +33,7 @@ describe('useExtractContent', () => {
 
   it('URL을 전달하면 추출된 콘텐츠 데이터를 반환해야 한다', async () => {
     vi.mocked(contentApi.extractContent).mockResolvedValueOnce({
-      data: {
-        ...mockExtractedContent,
-        sourceUrl: 'https://example.com/article',
-      },
+      ...mockExtractedContent,
     })
 
     const { result } = renderHook(() => useExtractContent(), { wrapper })
@@ -47,8 +44,7 @@ describe('useExtractContent', () => {
     })
 
     expect(result.current.data).toMatchObject({
-      sourceUrl: 'https://example.com/article',
-      extractedText: mockExtractedContent.extractedText,
+      content: mockExtractedContent.content,
       title: mockExtractedContent.title,
     })
   })

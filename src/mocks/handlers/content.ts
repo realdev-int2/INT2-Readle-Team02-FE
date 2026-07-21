@@ -72,10 +72,7 @@ export const contentHandlers = [
     }
 
     return HttpResponse.json({
-      data: {
-        ...mockExtractedContent,
-        sourceUrl: body.url,
-      },
+      ...mockExtractedContent,
     })
   }),
 

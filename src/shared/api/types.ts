@@ -47,10 +47,8 @@ export interface ExtractContentRequest {
 }
 
 export interface ExtractContentResponse {
-  sourceUrl: string
-  extractedText: string
+  content: string
   title: string
-  crawlStatus: Extract<CrawlStatus, 'success'>
 }
 
 export interface CreateContentRequest {

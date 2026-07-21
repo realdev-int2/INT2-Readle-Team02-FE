@@ -7,7 +7,7 @@ export function useExtractContent() {
   return useMutation<ExtractContentResponse, ApiError, ExtractContentRequest>({
     mutationFn: async (request) => {
       const response = await extractContent(request)
-      return response.data
+      return response
     },
   })
 }

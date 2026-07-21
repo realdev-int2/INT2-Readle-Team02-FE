@@ -52,7 +52,7 @@ export function HomePage() {
             setValues((current) => ({
               ...current,
               title: response.title,
-              content: response.extractedText,
+              content: response.content,
             }))
             changeMode('text')
           },

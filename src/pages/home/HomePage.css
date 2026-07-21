@@ -17,7 +17,7 @@
   pointer-events: none;
 }
 
-.learn-page > section {
+.learn-page>section {
   position: relative;
   z-index: 1;
 }
@@ -63,7 +63,7 @@
 
 .learn-composer-textarea {
   min-height: 10rem;
-  resize: vertical;
+  resize: none;
   padding-top: 1rem;
   font-size: var(--text-body);
   line-height: 1.6;
@@ -159,6 +159,7 @@
 }
 
 @media (max-width: 39.999rem) {
+
   .learn-method-tabs,
   .learn-submit-button {
     width: 100%;
@@ -166,6 +167,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .learn-composer,
   .learn-method-tab,
   .learn-submit-button {

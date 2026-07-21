@@ -9,7 +9,7 @@ import type {
 } from '@/shared/api/types'
 
 export function extractContent(request: ExtractContentRequest) {
-  return apiRequest<ApiResponse<ExtractContentResponse>>('/contents/extract', {
+  return apiRequest<ExtractContentResponse>('/contents/extract', {
     body: request,
     method: 'POST',
     requiresAuth: true,

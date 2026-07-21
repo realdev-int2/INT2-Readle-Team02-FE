@@ -3,21 +3,31 @@ import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { AuthContext } from '@/app/providers/AuthContext'
 import { AppRouter } from '@/app/router/AppRouter'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false },
+  },
+})
 
 function renderRoute(path: string) {
   return renderToStaticMarkup(
-    <AuthContext.Provider
-      value={{
-        isLoading: false,
-        invalidateAuth: () => {},
-        logout: async () => {},
-        member: { uuid: 'member-1', nickname: '테스트 사용자', profileImageUrl: null },
-      }}
-    >
-      <MemoryRouter initialEntries={[path]}>
-        <AppRouter />
-      </MemoryRouter>
-    </AuthContext.Provider>,
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider
+        value={{
+          isLoading: false,
+          invalidateAuth: () => {},
+          logout: async () => {},
+          member: { uuid: 'member-1', nickname: '테스트 사용자', profileImageUrl: null },
+        }}
+      >
+        <MemoryRouter initialEntries={[path]}>
+          <AppRouter />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    </QueryClientProvider>,
   )
 }
 

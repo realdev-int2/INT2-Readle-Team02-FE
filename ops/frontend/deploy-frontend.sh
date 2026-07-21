@@ -168,6 +168,9 @@ load_state() {
   if [[ -n "$previous_image" || -n "$previous_revision" || -n "$previous_ref" ]]; then
     [[ -n "$previous_image" && -n "$previous_revision" && -n "$previous_ref" ]] || return 1
   fi
+  if [[ -n "$pending_rollback_image" || -n "$pending_rollback_revision" || -n "$pending_rollback_ref" ]]; then
+    [[ -n "$pending_rollback_image" && -n "$pending_rollback_revision" && -n "$pending_rollback_ref" ]] || return 1
+  fi
   [[ "$have_last_good_image" == 1 && "$have_last_good_revision" == 1 && "$have_last_good_ref" == 1 && \
     "$have_pending_rollback_image" == 1 && "$have_pending_rollback_revision" == 1 && "$have_pending_rollback_ref" == 1 ]]
 }
@@ -300,6 +303,7 @@ clear_pending() {
 }
 
 promote_pending_rollback_to_previous() {
+  [[ -n "$pending_rollback_image" && -n "$pending_rollback_revision" && -n "$pending_rollback_ref" ]] || return 1
   previous_image="$pending_rollback_image"
   previous_revision="$pending_rollback_revision"
   previous_ref="$pending_rollback_ref"
@@ -415,6 +419,14 @@ self_test() {
     'pending_rollback_revision=' \
     'pending_rollback_ref=' > "$STATE_FILE"
   ! load_state
+  printf '%s\n' \
+    "last_good_image=$good_image_id" \
+    "last_good_revision=$good_sha" \
+    "last_good_ref=$good_digest" \
+    'pending_rollback_image=sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd' \
+    'pending_rollback_revision=' \
+    'pending_rollback_ref=' > "$STATE_FILE"
+  ! load_state
   last_good_image="sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
   last_good_revision="1111111111111111111111111111111111111111"
   last_good_ref="${IMAGE_PREFIX}@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
@@ -430,6 +442,11 @@ self_test() {
   grep -qx "previous_image=$good_image_id" "$STATE_FILE"
   grep -qx "previous_revision=$good_sha" "$STATE_FILE"
   grep -qx "previous_ref=$good_digest" "$STATE_FILE"
+  pending_rollback_image="$good_image_id"
+  pending_rollback_revision=""
+  pending_rollback_ref=""
+  ! promote_pending_rollback_to_previous
+  [[ "$previous_image" == "$good_image_id" && "$previous_revision" == "$good_sha" && "$previous_ref" == "$good_digest" ]]
   previous_image="sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
   previous_revision="2222222222222222222222222222222222222222"
   previous_ref="${IMAGE_PREFIX}@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"

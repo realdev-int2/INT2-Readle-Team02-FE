@@ -36,7 +36,6 @@ describe('AppRouter', () => {
     ['/learn', '새 학습 만들기'],
     ['/contents/preview', '콘텐츠 확인 · 수정'],
     ['/contents/101/preparing', '퀴즈를 만들고 있습니다'],
-    ['/quizzes/201', 'Spring @Transactional 심층 이해'],
     ['/quiz-attempts/301/grading', '답안을 채점하고 있습니다'],
     ['/result-reports/401', '결과 리포트'],
     ['/dashboard', '학습 현황 대시보드'],
@@ -45,6 +44,15 @@ describe('AppRouter', () => {
     const html = renderRoute(path)
 
     expect(html).toContain(title)
+    expect(html).toContain('aria-label="주요 메뉴"')
+  })
+
+  it('/quizzes/201 경로에서 퀴즈 로딩 화면을 렌더링한다', () => {
+    const html = renderRoute('/quizzes/201')
+
+    // QuizPage는 마운트 즉시 API를 호출하므로 초기 렌더는 로딩 스켈레톤
+    expect(html).toContain('quiz-page--loading')
+    expect(html).toContain('퀴즈를 불러오는 중입니다')
     expect(html).toContain('aria-label="주요 메뉴"')
   })
 

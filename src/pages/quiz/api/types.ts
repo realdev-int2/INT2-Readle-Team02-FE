@@ -39,7 +39,7 @@ export interface QuizDetailResponse {
 
 export interface QuizQuestionResult {
   questionId: number
-  isCorrect: boolean
+  isCorrect: boolean | null
   aiFeedback: string | null
 }
 

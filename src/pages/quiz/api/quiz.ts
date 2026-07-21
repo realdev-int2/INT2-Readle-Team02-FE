@@ -1,4 +1,5 @@
 import { apiRequest } from '@/shared/api/client'
+import type { ApiResponse } from '@/shared/api/types'
 import type {
   QuizAttemptStartResponse,
   QuizDetailResponse,
@@ -11,7 +12,7 @@ import type {
  * POST /api/quizzes/{quizSetId}/attempts
  */
 export function startQuizAttempt(quizSetId: number) {
-  return apiRequest<QuizAttemptStartResponse>(`/quizzes/${quizSetId}/attempts`, {
+  return apiRequest<ApiResponse<QuizAttemptStartResponse>>(`/quizzes/${quizSetId}/attempts`, {
     method: 'POST',
     requiresAuth: true,
   })
@@ -22,7 +23,7 @@ export function startQuizAttempt(quizSetId: number) {
  * GET /api/quizzes/attempts/{attemptId}
  */
 export function fetchQuizAttemptDetail(attemptId: number) {
-  return apiRequest<QuizDetailResponse>(`/quizzes/attempts/${attemptId}`, {
+  return apiRequest<ApiResponse<QuizDetailResponse>>(`/quizzes/attempts/${attemptId}`, {
     requiresAuth: true,
   })
 }
@@ -32,7 +33,7 @@ export function fetchQuizAttemptDetail(attemptId: number) {
  * POST /api/quizzes/attempts/{attemptId}/submit
  */
 export function submitQuizAttempt(attemptId: number, request: QuizSubmitRequest) {
-  return apiRequest<QuizSubmitResponse>(`/quizzes/attempts/${attemptId}/submit`, {
+  return apiRequest<ApiResponse<QuizSubmitResponse>>(`/quizzes/attempts/${attemptId}/submit`, {
     method: 'POST',
     body: request,
     requiresAuth: true,

@@ -77,7 +77,7 @@ export const quizHandlers = [
       startedAt: new Date().toISOString(),
     }
 
-    return HttpResponse.json({ data: response }, { status: 201 })
+    return HttpResponse.json({ data: response })
   }),
 
   // GET /api/quizzes/attempts/{attemptId} — 문제 상세 조회

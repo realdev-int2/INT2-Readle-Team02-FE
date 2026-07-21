@@ -3,36 +3,21 @@ import readleSymbolUrl from '@/shared/assets/readle-symbol.png'
 import readleWordmarkUrl from '@/shared/assets/readle-wordmark.png'
 import { SocialLoginButton } from '@/pages/login/ui/SocialLoginButton'
 import { ROUTES } from '@/shared/config/routes'
+import { sanitizeReturnTo } from '@/pages/landing/model/sanitizeReturnTo'
 
 interface LoginModalProps {
+  authError: string | null
   onClose: () => void
   open: boolean
 }
 
-function sanitizeReturnTo(value: string | null) {
-  if (
-    !value ||
-    typeof window === 'undefined' ||
-    !value.startsWith('/') ||
-    value.startsWith('//')
-  ) {
-    return ROUTES.landing
-  }
-
-  try {
-    const url = new URL(value, window.location.origin)
-
-    if (url.origin !== window.location.origin || url.pathname === ROUTES.login) {
-      return ROUTES.landing
-    }
-
-    return `${url.pathname}${url.search}`
-  } catch {
-    return ROUTES.landing
-  }
+const authErrorMessages: Record<string, string> = {
+  oauth_cancelled: '로그인이 취소되었습니다. 다시 시도해 주세요.',
+  oauth_failed: '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+  session_expired: '로그인 상태가 만료되었습니다. 다시 로그인해 주세요.',
 }
 
-export function LoginModal({ onClose, open }: LoginModalProps) {
+export function LoginModal({ authError, onClose, open }: LoginModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
 
@@ -94,6 +79,9 @@ export function LoginModal({ onClose, open }: LoginModalProps) {
           new URLSearchParams(window.location.search).get('returnTo') ??
             window.location.pathname + window.location.search,
         )
+  const authErrorMessage = authError
+    ? (authErrorMessages[authError] ?? authErrorMessages.oauth_failed)
+    : undefined
 
   return (
     <div
@@ -146,7 +134,13 @@ export function LoginModal({ onClose, open }: LoginModalProps) {
           />
         </div>
 
-        <p className="mt-2 text-center text-[0.6875rem] leading-relaxed text-text-muted">
+        {authErrorMessage && (
+          <p className="mt-4 text-center text-caption text-status-error" role="alert">
+            {authErrorMessage}
+          </p>
+        )}
+
+        <p className="mt-2 text-center text-label leading-relaxed text-text-muted">
           계속하면 Readle의 이용약관 및 개인정보 처리방침에 동의한 것으로 간주합니다.
         </p>
       </section>

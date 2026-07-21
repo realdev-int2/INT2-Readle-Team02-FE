@@ -10,7 +10,7 @@ import {
   registerAuthHandlers,
   setAccessToken,
 } from '@/shared/api/client'
-import { ApiError } from '@/shared/api/error'
+import { ApiError, isSessionExpired } from '@/shared/api/error'
 import type { Member } from '@/shared/api'
 import { AuthContext } from '@/app/providers/AuthContext'
 
@@ -21,7 +21,14 @@ interface AuthProviderProps {
 // eslint-disable-next-line react-refresh/only-export-components
 export async function restoreAuth(isCancelled: () => boolean = () => false): Promise<Member | null> {
   try {
-    await getAuthSession()
+    const {
+      data: { authenticated },
+    } = await getAuthSession()
+
+    if (!authenticated) {
+      return null
+    }
+
     const {
       data: { accessToken },
     } = await refreshAccessToken()
@@ -34,7 +41,11 @@ export async function restoreAuth(isCancelled: () => boolean = () => false): Pro
     const { data: currentMember } = await getCurrentMember()
 
     return currentMember
-  } catch {
+  } catch (error) {
+    if (isSessionExpired(error)) {
+      throw error
+    }
+
     if (!isCancelled()) {
       clearAccessToken()
     }
@@ -46,10 +57,16 @@ export async function restoreAuth(isCancelled: () => boolean = () => false): Pro
 export function AuthProvider({ children }: AuthProviderProps) {
   const [member, setMember] = useState<Member | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [sessionExpired, setSessionExpired] = useState(false)
 
-  const invalidateAuth = useCallback(() => {
+  const invalidateAuth = useCallback((reason?: 'session_expired') => {
     clearAccessToken()
     setMember(null)
+    setSessionExpired(reason === 'session_expired')
+  }, [])
+
+  const consumeSessionExpired = useCallback(() => {
+    setSessionExpired(false)
   }, [])
 
   const refreshAuth = useCallback(async () => {
@@ -81,21 +98,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let cancelled = false
 
-    void restoreAuth(() => cancelled).then((currentMember) => {
-      if (!cancelled) {
-        setMember(currentMember)
-        setIsLoading(false)
-      }
-    })
+    void restoreAuth(() => cancelled)
+      .then((currentMember) => {
+        if (!cancelled) {
+          setMember(currentMember)
+          setIsLoading(false)
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          if (isSessionExpired(error)) {
+            invalidateAuth('session_expired')
+          }
+          setIsLoading(false)
+        }
+      })
 
     return () => {
       cancelled = true
       clearAccessToken()
     }
-  }, [])
+  }, [invalidateAuth])
 
   return (
-    <AuthContext.Provider value={{ invalidateAuth, isLoading, logout, member }}>
+    <AuthContext.Provider
+      value={{ consumeSessionExpired, invalidateAuth, isLoading, logout, member, sessionExpired }}
+    >
       {children}
     </AuthContext.Provider>
   )

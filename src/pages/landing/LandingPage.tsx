@@ -1,11 +1,12 @@
-import { useCallback, useRef, useState, type MouseEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '@/app/providers/AuthContext'
 import readleSymbolUrl from '@/shared/assets/readle-symbol.png'
 import readleWordmarkUrl from '@/shared/assets/readle-wordmark.png'
 import { ROUTES } from '@/shared/config/routes'
 import { PageContainer, ProfileAvatar } from '@/shared/ui'
 import { LoginModal } from '@/pages/landing/ui/LoginModal'
+import { sanitizeReturnTo } from '@/pages/landing/model/sanitizeReturnTo'
 import '@/pages/landing/LandingPage.css'
 
 interface LandingPageProps {
@@ -184,12 +185,43 @@ function ProductPreview() {
 
 export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
   const navigate = useNavigate()
-  const { member, logout } = useAuth()
+  const location = useLocation()
+  const { consumeSessionExpired, member, logout } = useAuth()
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const [loginOpen, setLoginOpen] = useState(initialLoginOpen)
+  const [authError, setAuthError] = useState(() => new URLSearchParams(location.search).get('authError'))
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
   const profileLabel = member ? `${member.nickname} 프로필` : '프로필'
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (!params.has('authError')) {
+      return
+    }
+
+    // authError를 URL에서 제거한 뒤에도 로그인 모달에 안내 메시지를 유지한다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAuthError(params.get('authError'))
+    params.delete('authError')
+    if (params.has('returnTo')) {
+      params.set('returnTo', sanitizeReturnTo(params.get('returnTo')))
+    }
+    void navigate(
+      {
+        hash: location.hash,
+        pathname: location.pathname,
+        search: params.size ? `?${params}` : '',
+      },
+      { replace: true },
+    )
+  }, [location.hash, location.pathname, location.search, navigate])
+
+  useEffect(() => {
+    if (authError === 'session_expired') {
+      consumeSessionExpired?.()
+    }
+  }, [authError, consumeSessionExpired])
 
   function openLogin(event: MouseEvent<HTMLElement>) {
     returnFocusRef.current = event.currentTarget
@@ -466,7 +498,7 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
         </PageContainer>
       </footer>
 
-      <LoginModal onClose={closeLogin} open={loginOpen} />
+      <LoginModal authError={authError} onClose={closeLogin} open={loginOpen} />
     </div>
   )
 }

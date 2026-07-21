@@ -4,7 +4,9 @@ import type { Member } from '@/shared/api'
 export interface AuthContextValue {
   member: Member | null
   isLoading: boolean
-  invalidateAuth: () => void
+  sessionExpired?: boolean
+  consumeSessionExpired?: () => void
+  invalidateAuth: (reason?: 'session_expired') => void
   logout: () => Promise<void>
 }
 

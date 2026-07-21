@@ -59,6 +59,32 @@ describe('RequireAuth', () => {
     )
   })
 
+  it('redirects an expired session with the session_expired reason', () => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/learn?source=landing']}>
+        <AuthContext.Provider
+          value={{
+            invalidateAuth: () => {},
+            isLoading: false,
+            logout: async () => {},
+            member: null,
+            sessionExpired: true,
+          }}
+        >
+          <Routes>
+            <Route element={<RequireAuth />}>
+              <Route element={<span>private content</span>} path="/learn" />
+            </Route>
+          </Routes>
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+
+    expect(html).toContain(
+      'data-navigation="/login?authError=session_expired&amp;returnTo=%2Flearn%3Fsource%3Dlanding"',
+    )
+  })
+
   it('renders the outlet for an authenticated user', () => {
     const html = renderRequireAuth('/learn', { isLoading: false, member })
 

@@ -189,7 +189,7 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
   const { consumeSessionExpired, member, logout } = useAuth()
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const [loginOpen, setLoginOpen] = useState(initialLoginOpen)
-  const [authError] = useState(() => new URLSearchParams(location.search).get('authError'))
+  const [authError, setAuthError] = useState(() => new URLSearchParams(location.search).get('authError'))
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
   const profileLabel = member ? `${member.nickname} 프로필` : '프로필'
@@ -200,6 +200,9 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
       return
     }
 
+    // authError를 URL에서 제거한 뒤에도 로그인 모달에 안내 메시지를 유지한다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAuthError(params.get('authError'))
     params.delete('authError')
     if (params.has('returnTo')) {
       params.set('returnTo', sanitizeReturnTo(params.get('returnTo')))

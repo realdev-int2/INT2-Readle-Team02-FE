@@ -83,4 +83,19 @@ describe('login auth errors', () => {
       act(() => root.unmount())
     }
   })
+
+  it('updates the message when authError changes without remounting', async () => {
+    const { container, root } = await renderLogin('/login')
+
+    try {
+      await act(async () => {
+        window.history.pushState({}, '', '/login?authError=session_expired')
+        window.dispatchEvent(new PopStateEvent('popstate'))
+      })
+
+      expect(container.textContent).toContain('로그인 상태가 만료되었습니다. 다시 로그인해 주세요.')
+    } finally {
+      act(() => root.unmount())
+    }
+  })
 })

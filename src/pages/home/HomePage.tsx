@@ -177,9 +177,15 @@ export function HomePage() {
             {mode === 'url' ? (
               <div aria-labelledby="url-input-tab" id="url-input-panel" role="tabpanel">
                 {isExtracted && (
-                  <p className="mb-4 rounded-md border border-status-success/30 bg-status-success/10 px-4 py-3 text-sm font-medium text-status-success">
-                    ✅ 첨부한 URL의 제목과 본문을 성공적으로 불러왔습니다!
-                  </p>
+                  urlValues.content.trim().length > 0 ? (
+                    <p className="mb-4 rounded-md border border-status-success/30 bg-status-success/10 px-4 py-3 text-sm font-medium text-status-success">
+                      ✅ 첨부한 URL의 제목과 본문을 성공적으로 불러왔습니다!
+                    </p>
+                  ) : (
+                    <p className="mb-4 rounded-md border border-status-error/30 bg-status-error/10 px-4 py-3 text-sm font-medium text-status-error">
+                      ⚠️ 제목은 불러왔으나 본문을 추출할 수 없습니다. 본문을 직접 복사하여 붙여넣어 주세요.
+                    </p>
+                  )
                 )}
                 
                 <div className="flex items-center gap-2">

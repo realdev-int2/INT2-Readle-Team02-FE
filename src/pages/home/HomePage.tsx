@@ -7,7 +7,8 @@ import {
   type InputMode,
 } from '@/pages/home/model/contentInputValidation'
 import { ROUTES } from '@/shared/config/routes'
-import { ErrorMessage } from '@/shared/ui'
+import { Button, ErrorMessage } from '@/shared/ui'
+import { useExtractContent } from '@/pages/home/api/useExtractContent'
 import '@/pages/home/HomePage.css'
 
 export function HomePage() {
@@ -15,6 +16,9 @@ export function HomePage() {
   const [mode, setMode] = useState<InputMode>('url')
   const [values, setValues] = useState<ContentInputValues>(initialContentInputValues)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [extractError, setExtractError] = useState<string | null>(null)
+
+  const extractContent = useExtractContent()
 
   const errors = validateContentInput(mode, values)
   const isValid = Object.keys(errors).length === 0
@@ -25,14 +29,38 @@ export function HomePage() {
   }
 
   function updateValue(field: keyof ContentInputValues, value: string) {
+    if (field === 'url') {
+      setExtractError(null)
+    }
     setValues((current) => ({ ...current, [field]: value }))
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setTouched(mode === 'url' ? { url: true } : { content: true, title: true })
+    setExtractError(null)
 
     if (!isValid) {
+      return
+    }
+
+    if (mode === 'url') {
+      extractContent.mutate(
+        { url: values.url },
+        {
+          onSuccess: (response) => {
+            setValues((current) => ({
+              ...current,
+              title: response.title,
+              content: response.extractedText,
+            }))
+            changeMode('text')
+          },
+          onError: (error) => {
+            setExtractError(error.message || '본문을 자동으로 가져오지 못했습니다.')
+          },
+        },
+      )
       return
     }
 
@@ -102,6 +130,7 @@ export function HomePage() {
                 />
                 <ErrorMessage className="mt-2 px-2" id="learning-url-error">
                   {touched.url ? errors.url : undefined}
+                  {!errors.url && extractError ? extractError : undefined}
                 </ErrorMessage>
               </div>
             ) : (
@@ -145,10 +174,16 @@ export function HomePage() {
                   '공개된 기술 문서와 블로그 URL을 사용할 수 있습니다.'
                 )}
               </p>
-              <button className="learn-submit-button" disabled={!isValid} type="submit">
-                분석하고 퀴즈 만들기
+              <Button 
+                className="learn-submit-button" 
+                disabled={!isValid || extractContent.isPending} 
+                loading={extractContent.isPending}
+                loadingLabel="불러오는 중"
+                type="submit"
+              >
+                {mode === 'url' ? '본문 불러오기' : '분석하고 퀴즈 만들기'}
                 <span aria-hidden="true">→</span>
-              </button>
+              </Button>
             </div>
           </form>
         </div>

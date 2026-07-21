@@ -6,6 +6,7 @@ import { useExtractContent } from '@/pages/home/api/useExtractContent'
 import * as contentApi from '@/shared/api/content'
 import { mockExtractedContent } from '@/mocks/fixtures/content'
 import { ApiError } from '@/shared/api/error'
+import React from "react";
 
 // API 함수를 모킹합니다.
 vi.mock('@/shared/api/content')

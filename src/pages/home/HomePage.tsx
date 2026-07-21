@@ -198,11 +198,11 @@ export function HomePage() {
                   <div className="flex-1">
                     <label className="sr-only" htmlFor="learning-url">기술 아티클 URL</label>
                     <input
-                      aria-describedby={touched.url && errors.url ? 'learning-url-error' : undefined}
-                      aria-invalid={touched.url && errors.url ? true : undefined}
+                      aria-describedby={(touched.url && errors.url) || extractError ? 'learning-url-error' : undefined}
+                      aria-invalid={(touched.url && errors.url) || extractError ? true : undefined}
                       autoComplete="url"
                       className="learn-composer-input disabled:opacity-50"
-                      disabled={isExtracted}
+                      disabled={isExtracted || extractContent.isPending}
                       id="learning-url"
                       onBlur={() => setTouched((current) => ({ ...current, url: true }))}
                       onChange={(event) => updateValue('url', event.target.value)}

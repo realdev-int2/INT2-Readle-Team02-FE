@@ -95,4 +95,4 @@ To disable production deploys, disable or delete the production deploy workflow/
 
 The workflow serializes production deployments, but close `main` pushes can collapse to the latest pending run. It does not guarantee every commit deploys in order.
 
-This is a non-routing candidate preflight followed by single-live replacement. Expect short downtime while `readle-frontend` and `readle-nginx` restart.
+This is a non-routing candidate preflight followed by single-live replacement. Both candidate and live frontend containers use a 192 MB memory limit. Expect short downtime while `readle-frontend` and `readle-nginx` restart.

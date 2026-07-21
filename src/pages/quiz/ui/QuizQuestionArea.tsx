@@ -1,4 +1,12 @@
-import { isAnswered, questionTypeLabel, type QuizAnswer, type QuizQuestion } from '@/pages/quiz/model/quiz'
+import {
+  isAnswered,
+  questionTypeLabel,
+  type QuizAnswer,
+  type QuizQuestion,
+  type QuizMultipleChoiceQuestion,
+  type QuizShortAnswerQuestion,
+  type QuizCodeBlankQuestion,
+} from '@/pages/quiz/model/quiz'
 import { Button } from '@/shared/ui'
 
 function MultipleChoiceAnswer({
@@ -8,8 +16,19 @@ function MultipleChoiceAnswer({
 }: {
   answer: QuizAnswer | undefined
   onChange: (answer: QuizAnswer) => void
-  question: QuizQuestion
+  question: QuizMultipleChoiceQuestion
 }) {
+  if (!question.choices || question.choices.length === 0) {
+    return (
+      <div className="p-4 text-center text-text-muted bg-background-secondary rounded-lg border border-border-default">
+        <p>객관식 보기를 불러올 수 없습니다.</p>
+        <Button onClick={() => window.location.reload()} variant="secondary" className="mt-2">
+          새로고침
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <fieldset className="quiz-choice-list">
       <legend className="sr-only">답안 선택</legend>
@@ -46,12 +65,23 @@ function TextAnswer({
 }: {
   answer: QuizAnswer | undefined
   onChange: (answer: QuizAnswer) => void
-  question: QuizQuestion
+  question: QuizShortAnswerQuestion | QuizCodeBlankQuestion
 }) {
   const value = typeof answer === 'string' ? answer : ''
   const isCodeBlank = question.type === 'code_blank'
 
   if (isCodeBlank) {
+    if (!question.codeSnippet) {
+      return (
+        <div className="p-4 text-center text-text-muted bg-background-secondary rounded-lg border border-border-default">
+          <p>코드 데이터를 불러올 수 없습니다.</p>
+          <Button onClick={() => window.location.reload()} variant="secondary" className="mt-2">
+            새로고침
+          </Button>
+        </div>
+      )
+    }
+
     return (
       <div>
         <div className="quiz-code-editor">

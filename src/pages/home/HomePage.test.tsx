@@ -249,7 +249,7 @@ describe('HomePage', () => {
 
   describe('경쟁 조건(Race Condition) 방어 테스트', () => {
     it('URL -> TEXT -> URL 탭 전환 시 이전 추출 요청의 지연 응답을 무시한다', async () => {
-      let resolveFirstExtract!: (value: any) => void
+      let resolveFirstExtract!: (value: unknown) => void
       
       // 첫 번째 요청은 지연되도록 설정
       vi.mocked(contentApi.extractContent).mockImplementationOnce(() => {

@@ -663,7 +663,7 @@ self_test() {
   pending_rollback_image="$good_image_id"
   pending_rollback_revision="$good_sha"
   pending_rollback_ref="$good_digest"
-  ! ( save_pending_rollback_or_fail )
+  ( save_pending_rollback_or_fail ) && exit 1
   grep -qx "pending_rollback_image=$good_image_id" "$run_log"
   grep -qx "pending_rollback_revision=$good_sha" "$run_log"
   grep -qx "pending_rollback_ref=$good_digest" "$run_log"
@@ -704,7 +704,7 @@ self_test() {
   pending_rollback_image=""
   pending_rollback_revision=""
   pending_rollback_ref=""
-  ! save_state
+  save_state && exit 1
   restore_pre_deploy_after_final_save_failure "$previous_image" "$previous_revision" "$previous_ref" \
     "$raw_good_image_id" "$good_sha" "$good_digest" \
     "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" \
@@ -727,8 +727,8 @@ self_test() {
   replace_live() { :; }
   restart_edge() { :; }
   edge_smoke_retry() { :; }
-  ! restore_pre_deploy_after_final_save_failure "$good_image_id" "$good_sha" "$good_digest" \
-    "$raw_good_image_id" "$good_sha" "$good_digest" "" "" ""
+  restore_pre_deploy_after_final_save_failure "$good_image_id" "$good_sha" "$good_digest" \
+    "$raw_good_image_id" "$good_sha" "$good_digest" "" "" "" && exit 1
 
   rm -f "$repository_file"
   unset IMAGE_PREFIX

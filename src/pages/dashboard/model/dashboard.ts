@@ -33,12 +33,20 @@ export interface DashboardData {
   totals: DashboardTotals
 }
 
+const ISO_OFFSET_PATTERN = /(Z|[+-]\d{2}:?\d{2})$/i
+
+function parseDashboardTimestamp(value: string) {
+  const timestamp = ISO_OFFSET_PATTERN.test(value) ? value : `${value}+09:00`
+
+  return new Date(timestamp)
+}
+
 export function formatDashboardDate(value: string) {
   return new Intl.DateTimeFormat('ko-KR', {
     month: 'short',
     day: 'numeric',
     timeZone: 'Asia/Seoul',
-  }).format(new Date(value))
+  }).format(parseDashboardTimestamp(value))
 }
 
 export function formatLastCompletedAt(value: string | null) {
@@ -49,7 +57,7 @@ export function formatLastCompletedAt(value: string | null) {
     month: 'long',
     day: 'numeric',
     timeZone: 'Asia/Seoul',
-  }).format(new Date(value))
+  }).format(parseDashboardTimestamp(value))
 }
 
 export function formatAccuracyRate(value: number) {

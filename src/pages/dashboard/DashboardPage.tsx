@@ -5,6 +5,7 @@ import {
   clampAccuracyRate,
   formatAccuracyRate,
   formatDashboardDate,
+  formatLastCompletedAt,
   isDashboardEmpty,
   type DashboardData,
   type DashboardRecentRecord,
@@ -156,7 +157,7 @@ function LatestLearningCard({ record }: { record?: DashboardRecentRecord }) {
     <article className="dashboard-latest-card">
       <div className="dashboard-card-heading">
         <div><span className="dashboard-section-label">LATEST</span><h2>최근 학습</h2></div>
-        {record && <time dateTime={record.completedAt}>{new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Seoul' }).format(new Date(record.completedAt))}</time>}
+        {record && <time dateTime={record.completedAt}>{formatLastCompletedAt(record.completedAt)}</time>}
       </div>
       {record ? (
         <>

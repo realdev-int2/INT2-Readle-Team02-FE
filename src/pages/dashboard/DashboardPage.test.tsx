@@ -145,6 +145,8 @@ describe('DashboardPage', () => {
 describe('dashboard model', () => {
   it('KST 정책으로 완료 일시를 표시하고 빈 최근 학습일을 처리한다', () => {
     expect(formatDashboardDate('2026-07-16T11:48:00')).toContain('7월')
+    expect(formatDashboardDate('2026-07-16T23:30:00Z')).toContain('7월 17일')
+    expect(formatDashboardDate('2026-07-16T23:30:00+09:00')).toContain('7월 16일')
     expect(formatLastCompletedAt(null)).toBe('학습 기록 없음')
   })
 

@@ -668,7 +668,7 @@
     padding-left: 1rem;
   }
 
-  .dashboard-activity-list {
+  .dashboard-activity-list a {
     grid-template-columns: 1fr;
     gap: 0.55rem;
   }

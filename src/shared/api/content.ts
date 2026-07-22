@@ -2,22 +2,22 @@ import { apiRequest } from '@/shared/api/client'
 import type {
   ApiResponse,
   ContentValidationResponse,
-  CreateContentRequest,
-  CreateContentResponse,
-  ExtractContentRequest,
-  ExtractContentResponse,
+  ContentCreateRequest,
+  ContentCreateResponse,
+  ContentExtractRequest,
+  ContentExtractResponse,
 } from '@/shared/api/types'
 
-export function extractContent(request: ExtractContentRequest) {
-  return apiRequest<ExtractContentResponse>('/contents/extract', {
+export function extractContent(request: ContentExtractRequest) {
+  return apiRequest<ContentExtractResponse>('/contents/extract', {
     body: request,
     method: 'POST',
     requiresAuth: true,
   })
 }
 
-export function createContent(request: CreateContentRequest) {
-  return apiRequest<ApiResponse<CreateContentResponse>>('/contents', {
+export function createContent(request: ContentCreateRequest) {
+  return apiRequest<ApiResponse<ContentCreateResponse>>('/contents', {
     body: request,
     method: 'POST',
     requiresAuth: true,

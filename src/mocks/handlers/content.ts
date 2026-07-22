@@ -7,17 +7,17 @@ import {
 } from '@/mocks/fixtures/content'
 import type {
   ApiErrorBody,
-  CreateContentRequest,
-  ExtractContentRequest,
+  ContentCreateRequest,
+  ContentExtractRequest,
   ValidationStatus,
 } from '@/shared/api'
 
 const validationPollCounts = new Map<string, number>()
 const validationScenarios = new Set<ValidationStatus>([
-  'pending',
-  'passed',
-  'rejected',
-  'failed',
+  'PENDING',
+  'PASSED',
+  'REJECTED',
+  'FAILED',
 ])
 
 function createErrorResponse(code: string, message: string): ApiErrorBody {
@@ -48,12 +48,12 @@ function resolveValidationScenario(request: Request, contentId: string) {
   const pollCount = (validationPollCounts.get(contentId) ?? 0) + 1
   validationPollCounts.set(contentId, pollCount)
 
-  return pollCount < 3 ? 'pending' : 'passed'
+  return pollCount < 3 ? 'PENDING' : 'PASSED'
 }
 
 export const contentHandlers = [
   http.post('*/api/contents/extract', async ({ request }) => {
-    const body = (await request.json()) as ExtractContentRequest
+    const body = (await request.json()) as ContentExtractRequest
 
     if (!isValidUrl(body.url)) {
       return HttpResponse.json(createErrorResponse('INVALID_URL', 'URL 형식을 확인해 주세요.'), {
@@ -77,11 +77,11 @@ export const contentHandlers = [
   }),
 
   http.post('*/api/contents', async ({ request }) => {
-    const body = (await request.json()) as CreateContentRequest
+    const body = (await request.json()) as ContentCreateRequest
 
-    if (!body.text.trim() || !body.title.trim()) {
+    if (!body.text?.trim() || (body.inputType === 'URL' && !body.title?.trim())) {
       return HttpResponse.json(
-        createErrorResponse('INVALID_INPUT', '제목과 본문을 확인해 주세요.'),
+        createErrorResponse('INVALID_INPUT', '입력값을 확인해 주세요.'),
         { status: 400 },
       )
     }
@@ -90,11 +90,7 @@ export const contentHandlers = [
 
     return HttpResponse.json(
       {
-        data: {
-          ...mockCreatedContent,
-          crawlStatus: body.inputType === 'url' ? 'success' : 'not_applicable',
-          inputType: body.inputType,
-        },
+        data: mockCreatedContent,
       },
       { status: 201 },
     )

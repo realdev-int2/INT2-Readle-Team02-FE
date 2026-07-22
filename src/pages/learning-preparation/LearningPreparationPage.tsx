@@ -165,7 +165,7 @@ export function LearningPreparationPage() {
                 return (
                   <li
                     aria-current={isActive || isErrorState ? 'step' : undefined}
-                    className={`preparation-stage ${isActive ? 'preparation-stage-active' : ''} ${isComplete ? 'preparation-stage-complete' : ''} ${isErrorState ? 'opacity-50 grayscale' : ''}`}
+                    className={`preparation-stage ${isActive ? 'preparation-stage-active' : ''} ${isComplete ? 'preparation-stage-complete' : ''} ${isErrorState ? 'preparation-stage-error' : ''}`}
                     key={step.code}
                   >
                     <span className="preparation-stage-number">

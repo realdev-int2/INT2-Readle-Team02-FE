@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import type { SyntheticEvent } from 'react'
+import { useState, useRef } from 'react'
 import { generatePath, useNavigate } from 'react-router'
 import { ROUTES } from '@/shared/config/routes'
 import {
@@ -9,18 +10,20 @@ import {
 } from '@/pages/home/model/contentInputValidation'
 import { useExtractContent } from '@/pages/home/api/useExtractContent'
 import { useCreateContent } from '@/pages/home/api/useCreateContent'
+import type { ContentCreateRequest } from '@/shared/api/types'
 
 export function useContentForm() {
   const navigate = useNavigate()
-  
+
   const extractContent = useExtractContent()
   const createContent = useCreateContent()
-  
+
   const [mode, setMode] = useState<InputMode>('URL')
   const [urlValues, setUrlValues] = useState<ContentInputValues>(initialContentInputValues)
   const [textValues, setTextValues] = useState<ContentInputValues>(initialContentInputValues)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [isExtracted, setIsExtracted] = useState(false)
+  const modeRef = useRef<InputMode>(mode)
 
   const values = mode === 'URL' ? urlValues : textValues
   const errors = validateContentInput(mode, values, isExtracted)
@@ -31,6 +34,7 @@ export function useContentForm() {
 
   function changeMode(nextMode: InputMode) {
     setMode(nextMode)
+    modeRef.current = nextMode
     setTouched({})
     createContent.reset()
     extractContent.reset()
@@ -59,7 +63,7 @@ export function useContentForm() {
     setTouched((current) => ({ ...current, [field]: true }))
   }
 
-  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
+  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     setTouched(
       mode === 'URL'
@@ -68,7 +72,7 @@ export function useContentForm() {
           : { url: true }
         : { content: true, title: true }
     )
-    
+
     createContent.reset()
 
     if (!isValid) {
@@ -80,6 +84,7 @@ export function useContentForm() {
         { url: values.url },
         {
           onSuccess: (response) => {
+            if (modeRef.current !== 'URL') return
             setUrlValues((current) => ({
               ...current,
               title: response.title,
@@ -88,6 +93,7 @@ export function useContentForm() {
             setIsExtracted(true)
           },
           onError: () => {
+            if (modeRef.current !== 'URL') return
             setIsExtracted(false)
           },
         },
@@ -95,20 +101,30 @@ export function useContentForm() {
       return
     }
 
+    const payload: ContentCreateRequest =
+      mode === 'URL'
+        ? {
+            inputType: 'URL',
+            title: values.title || undefined,
+            url: values.url,
+            extractedText: values.content,
+          }
+        : {
+            inputType: 'TEXT',
+            title: values.title || undefined,
+            text: values.content,
+          }
+
     createContent.mutate(
-      {
-        inputType: mode,
-        title: mode === 'URL' ? values.title : undefined,
-        url: mode === 'URL' ? values.url : null,
-        extractedText: mode === 'URL' ? values.content : null,
-        text: mode === 'TEXT' ? values.content : undefined,
-      },
+      payload,
       {
         onSuccess: (response) => {
           if (response.validationStatus === 'PENDING') {
             void navigate(generatePath(ROUTES.learningPreparation, { contentId: String(response.contentId) }))
+          } else {
+            window.alert('입력하신 콘텐츠가 유효하지 않아 거부되었습니다. 내용을 다시 확인해 주세요.')
           }
-        }
+        },
       }
     )
   }

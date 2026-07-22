@@ -1,12 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from 'react'
-import { generatePath, useNavigate } from 'react-router'
-import {
-  initialContentInputValues,
-  validateContentInput,
-  type ContentInputValues,
-  type InputMode,
-} from '@/pages/home/model/contentInputValidation'
-import { ROUTES } from '@/shared/config/routes'
+import { useRef, useLayoutEffect } from 'react'
 import { Button, ErrorMessage } from '@/shared/ui'
 import { useContentForm } from '@/pages/home/model/useContentForm'
 import '@/pages/home/HomePage.css'

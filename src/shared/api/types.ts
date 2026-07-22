@@ -28,7 +28,6 @@ export interface AuthSession {
 
 export type ContentInputType = 'URL' | 'TEXT'
 
-export type CrawlStatus = 'not_applicable' | 'success' | 'failed'
 
 export type ValidationStatus = 'PENDING' | 'PASSED' | 'REJECTED' | 'FAILED'
 
@@ -51,13 +50,18 @@ export interface ContentExtractResponse {
   title: string
 }
 
-export interface ContentCreateRequest {
-  inputType: ContentInputType
-  title?: string
-  url?: string | null
-  extractedText?: string | null
-  text?: string
-}
+export type ContentCreateRequest =
+  | {
+      inputType: 'URL'
+      title?: string
+      url: string
+      extractedText: string
+    }
+  | {
+      inputType: 'TEXT'
+      title?: string
+      text: string
+    }
 
 export interface ContentCreateResponse {
   contentId: number

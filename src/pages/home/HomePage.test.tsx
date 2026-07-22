@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, Routes, Route } from 'react-router'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HomePage } from '@/pages/home/HomePage'
@@ -169,8 +169,11 @@ describe('HomePage', () => {
 
       render(
         <QueryClientProvider client={queryClient}>
-          <MemoryRouter>
-            <HomePage />
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/contents/:contentId/preparing" element={<div data-testid="preparation-page">학습 준비 화면</div>} />
+            </Routes>
           </MemoryRouter>
         </QueryClientProvider>
       )
@@ -199,6 +202,9 @@ describe('HomePage', () => {
           url: 'https://example.com/article',
         })
       )
+
+      const preparationPage = await screen.findByTestId('preparation-page')
+      expect(preparationPage).toBeInTheDocument()
     })
 
     it('TEXT 모드로 성공적으로 콘텐츠를 등록하고 이동한다', async () => {
@@ -208,8 +214,11 @@ describe('HomePage', () => {
 
       render(
         <QueryClientProvider client={queryClient}>
-          <MemoryRouter>
-            <HomePage />
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/contents/:contentId/preparing" element={<div data-testid="preparation-page">학습 준비 화면</div>} />
+            </Routes>
           </MemoryRouter>
         </QueryClientProvider>
       )
@@ -232,6 +241,9 @@ describe('HomePage', () => {
           text: 'a'.repeat(300),
         })
       )
+
+      const preparationPage = await screen.findByTestId('preparation-page')
+      expect(preparationPage).toBeInTheDocument()
     })
   })
 })

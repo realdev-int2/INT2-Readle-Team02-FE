@@ -1,7 +1,6 @@
 import type {
   ContentValidationResponse,
   ContentCreateResponse,
-  ContentExtractRequest,
   ContentExtractResponse,
   ValidationStatus,
 } from '@/shared/api'

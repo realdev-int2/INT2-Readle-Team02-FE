@@ -79,9 +79,16 @@ export const contentHandlers = [
   http.post('*/api/contents', async ({ request }) => {
     const body = (await request.json()) as ContentCreateRequest
 
-    if (!body.text?.trim() || (body.inputType === 'URL' && !body.title?.trim())) {
+    if (body.inputType === 'URL' && (!body.extractedText?.trim() || !body.title?.trim())) {
       return HttpResponse.json(
         createErrorResponse('INVALID_INPUT', '입력값을 확인해 주세요.'),
+        { status: 400 },
+      )
+    }
+
+    if (body.inputType === 'TEXT' && !body.text?.trim()) {
+      return HttpResponse.json(
+        createErrorResponse('INVALID_INPUT', '본문을 확인해 주세요.'),
         { status: 400 },
       )
     }

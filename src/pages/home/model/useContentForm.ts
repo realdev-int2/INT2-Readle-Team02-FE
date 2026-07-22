@@ -24,6 +24,7 @@ export function useContentForm() {
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [isExtracted, setIsExtracted] = useState(false)
   const modeRef = useRef<InputMode>(mode)
+  const submitGenerationRef = useRef(0)
 
   const values = mode === 'URL' ? urlValues : textValues
   const errors = validateContentInput(mode, values, isExtracted)
@@ -33,6 +34,7 @@ export function useContentForm() {
   const createErrorMsg = createContent.error ? (createContent.error.message || '콘텐츠 등록에 실패했습니다.') : null
 
   function changeMode(nextMode: InputMode) {
+    submitGenerationRef.current += 1
     setMode(nextMode)
     modeRef.current = nextMode
     setTouched({})
@@ -79,12 +81,14 @@ export function useContentForm() {
       return
     }
 
+    const currentGeneration = ++submitGenerationRef.current
+
     if (mode === 'URL' && !isExtracted) {
       extractContent.mutate(
         { url: values.url },
         {
           onSuccess: (response) => {
-            if (modeRef.current !== 'URL') return
+            if (currentGeneration !== submitGenerationRef.current) return
             setUrlValues((current) => ({
               ...current,
               title: response.title,
@@ -93,7 +97,7 @@ export function useContentForm() {
             setIsExtracted(true)
           },
           onError: () => {
-            if (modeRef.current !== 'URL') return
+            if (currentGeneration !== submitGenerationRef.current) return
             setIsExtracted(false)
           },
         },
@@ -119,6 +123,7 @@ export function useContentForm() {
       payload,
       {
         onSuccess: (response) => {
+          if (currentGeneration !== submitGenerationRef.current) return
           if (response.validationStatus === 'PENDING') {
             void navigate(generatePath(ROUTES.learningPreparation, { contentId: String(response.contentId) }))
           } else {

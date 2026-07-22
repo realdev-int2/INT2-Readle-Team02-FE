@@ -246,4 +246,53 @@ describe('HomePage', () => {
       expect(preparationPage).toBeInTheDocument()
     })
   })
+
+  describe('경쟁 조건(Race Condition) 방어 테스트', () => {
+    it('URL -> TEXT -> URL 탭 전환 시 이전 추출 요청의 지연 응답을 무시한다', async () => {
+      let resolveFirstExtract!: (value: any) => void
+      
+      // 첫 번째 요청은 지연되도록 설정
+      vi.mocked(contentApi.extractContent).mockImplementationOnce(() => {
+        return new Promise(resolve => {
+          resolveFirstExtract = resolve
+        })
+      })
+
+      const user = userEvent.setup()
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <HomePage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+      // 1. URL 입력 후 첫 번째 요청 발송
+      const urlInput = screen.getByLabelText('기술 아티클 URL')
+      await user.type(urlInput, 'https://example.com/first')
+      const extractButton = screen.getByRole('button', { name: '본문 불러오기' })
+      await user.click(extractButton)
+
+      // 2. TEXT 탭으로 이동했다가 다시 URL 탭으로 돌아옴 (Generation 증가)
+      const textTab = screen.getByRole('tab', { name: /텍스트 직접 입력/ })
+      const urlTab = screen.getByRole('tab', { name: /URL 가져오기/ })
+      await user.click(textTab)
+      await user.click(urlTab)
+
+      // 3. 지연되었던 첫 번째 요청의 응답이 이제야 도착함
+      resolveFirstExtract({
+        content: '과거 요청된 추출 본문',
+        title: '과거 제목'
+      })
+
+      // 비동기 처리가 끝날 때까지 대기
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      // 4. 이전 응답이 무시되었으므로 여전히 추출 전 상태('본문 불러오기' 버튼이 그대로 존재)여야 함
+      expect(screen.getByRole('button', { name: '본문 불러오기' })).toBeInTheDocument()
+      expect(screen.queryByText('과거 요청된 추출 본문')).not.toBeInTheDocument()
+    })
+  })
 })

@@ -5,7 +5,21 @@ import type {
   QuizDetailResponse,
   QuizSubmitRequest,
   QuizSubmitResponse,
+  QuizCreateRequest,
+  QuizCreateResponse,
 } from '@/pages/quiz/api/types'
+
+/**
+ * 퀴즈 생성 — 검증 완료된 콘텐츠를 바탕으로 퀴즈를 생성합니다.
+ * POST /api/quizzes
+ */
+export function createQuiz(request: QuizCreateRequest) {
+  return apiRequest<ApiResponse<QuizCreateResponse>>('/quizzes', {
+    method: 'POST',
+    body: request,
+    requiresAuth: true,
+  })
+}
 
 /**
  * 퀴즈 풀이 시작 — 새로운 Attempt를 생성하고 attemptId를 반환받습니다.

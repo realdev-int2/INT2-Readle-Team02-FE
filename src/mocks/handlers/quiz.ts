@@ -59,6 +59,18 @@ export const mockSubmitResponse: QuizSubmitResponse = {
 }
 
 export const quizHandlers = [
+  // POST /api/quizzes — 퀴즈 생성
+  http.post('*/api/quizzes', async () => {
+    return HttpResponse.json({
+      data: {
+        quizId: MOCK_QUIZ_SET_ID,
+        status: 'created',
+        questionCount: 3,
+        createdAt: new Date().toISOString(),
+      },
+    })
+  }),
+
   // POST /api/quizzes/{quizSetId}/attempts — 퀴즈 시작
   http.post('*/api/quizzes/:quizSetId/attempts', ({ params }) => {
     const quizSetId = Number(params.quizSetId)

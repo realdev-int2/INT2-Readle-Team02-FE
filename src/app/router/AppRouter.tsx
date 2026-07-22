@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router'
 import { AppLayout } from '@/app/layouts/AppLayout'
 import { DesignSystemPage } from '@/pages/design-system/DesignSystemPage'
+import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { GradingPage } from '@/pages/grading/GradingPage'
 import { HomePage } from '@/pages/home/HomePage'
 import { LandingPage } from '@/pages/landing/LandingPage'
@@ -51,13 +52,7 @@ export function AppRouter() {
           />
           <Route
             path={ROUTES.dashboard}
-            element={
-              <RoutePlaceholderPage
-                description="태그를 기준으로 누적 학습 데이터를 확인하는 화면이 들어갈 자리입니다."
-                eyebrow="Dashboard"
-                title="학습 현황 대시보드"
-              />
-            }
+            element={<DashboardPage />}
           />
           <Route
             path={ROUTES.history}

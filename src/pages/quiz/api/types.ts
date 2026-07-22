@@ -21,6 +21,14 @@ export interface QuizQuestionResponse {
   choices: QuizChoiceResponse[] | null
 }
 
+/** POST /api/quizzes 응답 */
+export interface QuizCreateResponse {
+  quizId: number
+  status: string
+  questionCount: number
+  createdAt: string
+}
+
 /** POST /api/quizzes/{quizSetId}/attempts 응답 */
 export interface QuizAttemptStartResponse {
   attemptId: number
@@ -57,6 +65,10 @@ export interface QuizSubmitResponse {
 }
 
 // ─── 백엔드 요청 타입 ────────────────────────────────────────────────────────
+
+export interface QuizCreateRequest {
+  sourceValidationId: number
+}
 
 export interface AnswerRequest {
   questionId: number

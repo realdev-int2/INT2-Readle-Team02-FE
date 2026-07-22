@@ -59,3 +59,14 @@ export const mockValidationResponses: Record<ValidationStatus, ContentValidation
     validatedAt: VALIDATED_AT,
   },
 }
+
+/** MSW 전용: REJECTED이지만 우회(Bypass) 퀴즈 생성이 허용된 시나리오. mockScenario=REJECTED_BYPASS 로 테스트 가능. */
+export const mockRejectedBypassResponse: ContentValidationResponse = {
+  contentId: MOCK_CONTENT_ID,
+  status: 'REJECTED',
+  errorCode: 'LOW_CONFIDENCE',
+  message: '정확한 검증이 어렵습니다. 콘텐츠 내용을 다시 한번 확인해 주세요.',
+  bypassAvailable: true,
+  requestedAt: REQUESTED_AT,
+  validatedAt: VALIDATED_AT,
+}

@@ -59,6 +59,16 @@ export const mockSubmitResponse: QuizSubmitResponse = {
 }
 
 export const quizHandlers = [
+  // POST /api/quizzes — 퀴즈 생성
+  http.post('*/api/quizzes', async () => {
+    return HttpResponse.json({
+      quizId: MOCK_QUIZ_SET_ID,
+      status: 'created',
+      questionCount: 3,
+      createdAt: new Date().toISOString(),
+    })
+  }),
+
   // POST /api/quizzes/{quizSetId}/attempts — 퀴즈 시작
   http.post('*/api/quizzes/:quizSetId/attempts', ({ params }) => {
     const quizSetId = Number(params.quizSetId)
@@ -77,7 +87,7 @@ export const quizHandlers = [
       startedAt: new Date().toISOString(),
     }
 
-    return HttpResponse.json({ data: response })
+    return HttpResponse.json(response)
   }),
 
   // GET /api/quizzes/attempts/{attemptId} — 문제 상세 조회
@@ -91,7 +101,7 @@ export const quizHandlers = [
       )
     }
 
-    return HttpResponse.json({ data: mockQuizDetail })
+    return HttpResponse.json(mockQuizDetail)
   }),
 
   // POST /api/quizzes/attempts/{attemptId}/submit — 답안 제출
@@ -105,6 +115,6 @@ export const quizHandlers = [
       )
     }
 
-    return HttpResponse.json({ data: mockSubmitResponse })
+    return HttpResponse.json(mockSubmitResponse)
   }),
 ]

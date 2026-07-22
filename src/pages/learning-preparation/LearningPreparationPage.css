@@ -59,7 +59,7 @@
   background: rgb(21 27 38 / 0.72);
   color: var(--color-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
@@ -116,7 +116,7 @@
   padding: 0 1.1rem;
   color: var(--color-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.1em;
 }
@@ -151,6 +151,13 @@
   transform: translateX(0.2rem);
 }
 
+.preparation-stage-error {
+  border-color: rgb(239 68 68 / 0.52);
+  background: linear-gradient(90deg, rgb(239 68 68 / 0.11), rgb(239 68 68 / 0.025));
+  color: var(--color-text-primary);
+  transform: translateX(0.2rem);
+}
+
 .preparation-stage-complete {
   border-color: rgb(52 211 153 / 0.22);
 }
@@ -163,7 +170,7 @@
   border: 1px solid var(--color-border-default);
   border-radius: 50%;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -171,6 +178,12 @@
   border-color: var(--color-brand-400);
   color: var(--color-brand-400);
   box-shadow: 0 0 1rem rgb(76 131 255 / 0.2);
+}
+
+.preparation-stage-error .preparation-stage-number {
+  border-color: var(--color-status-error);
+  color: var(--color-status-error);
+  box-shadow: 0 0 1rem rgb(239 68 68 / 0.2);
 }
 
 .preparation-stage-complete .preparation-stage-number {
@@ -187,7 +200,7 @@
 .preparation-stage-code {
   color: var(--color-brand-400);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
@@ -209,13 +222,18 @@
 
 .preparation-stage-state {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.5rem;
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
 
 .preparation-stage-active .preparation-stage-state {
   color: var(--color-brand-400);
+}
+
+.preparation-stage-error .preparation-stage-state,
+.preparation-stage-error .preparation-stage-code {
+  color: var(--color-status-error);
 }
 
 .preparation-stage-complete .preparation-stage-state {
@@ -259,7 +277,7 @@
   background: var(--color-surface-elevated);
   color: var(--color-text-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   box-shadow: 0 0 1.25rem rgb(76 131 255 / 0.08);
@@ -316,7 +334,7 @@
   padding: 0.3rem 0.55rem;
   color: var(--color-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
 }
 
 .preparation-footer {

@@ -4,6 +4,7 @@ import {
   mockCreatedContent,
   mockExtractedContent,
   mockValidationResponses,
+  mockRejectedBypassResponse,
 } from '@/mocks/fixtures/content'
 import type {
   ApiErrorBody,
@@ -41,6 +42,10 @@ function isValidUrl(value: string) {
 function resolveValidationScenario(request: Request, contentId: string) {
   const requestedScenario = new URL(request.url).searchParams.get('mockScenario')
 
+  if (requestedScenario === 'REJECTED_BYPASS') {
+    return 'REJECTED_BYPASS' as const
+  }
+
   if (requestedScenario && validationScenarios.has(requestedScenario as ValidationStatus)) {
     return requestedScenario as ValidationStatus
   }
@@ -48,7 +53,7 @@ function resolveValidationScenario(request: Request, contentId: string) {
   const pollCount = (validationPollCounts.get(contentId) ?? 0) + 1
   validationPollCounts.set(contentId, pollCount)
 
-  return pollCount < 3 ? 'PENDING' : 'PASSED'
+  return pollCount < 3 ? ('PENDING' as const) : ('PASSED' as const)
 }
 
 export const contentHandlers = [
@@ -112,6 +117,10 @@ export const contentHandlers = [
     }
 
     const scenario = resolveValidationScenario(request, contentId)
+
+    if (scenario === 'REJECTED_BYPASS') {
+      return HttpResponse.json(mockRejectedBypassResponse)
+    }
 
     return HttpResponse.json(
       mockValidationResponses[scenario]

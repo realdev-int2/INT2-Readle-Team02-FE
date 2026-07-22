@@ -41,7 +41,7 @@ export function LearningPreparationPage() {
   const [hasAdvancedToGenerate, setHasAdvancedToGenerate] = useState(false)
   const isRoutingRef = useRef(false)
 
-  const { data: validationResponse } = useValidationPolling(contentId)
+  const { data: validationResponse, isError: isValidationError, refetch: retryValidation } = useValidationPolling(contentId)
   const validationStatus = validationResponse?.status
 
   const createQuizMutation = useCreateQuiz()
@@ -94,16 +94,24 @@ export function LearningPreparationPage() {
   const complete = activeStage >= preparationSteps.length
   const progress = complete ? 100 : Math.round(((activeStage + 0.35) / preparationSteps.length) * 100)
 
-  const isRejected = validationStatus === 'REJECTED' || validationStatus === 'FAILED' || createQuizMutation.isError
-  const errorMessage = createQuizMutation.isError
+  // 상태 분류: 검증 반려, 검증 API 실패, 퀴즈 생성 실패를 각각 분리
+  const isRejected = validationStatus === 'REJECTED' || validationStatus === 'FAILED'
+  const isQuizCreateError = createQuizMutation.isError
+  const bypassAvailable = validationResponse?.bypassAvailable ?? false
+
+  const errorMessage = isQuizCreateError
     ? '퀴즈 생성 중 오류가 발생했습니다.'
     : (validationResponse?.message ?? '콘텐츠 검증 중 문제가 발생했습니다.')
-  const bypassAvailable = validationResponse?.bypassAvailable ?? false
 
   const handleBypass = () => {
     if (!createQuizMutation.isPending) {
       createQuizMutation.mutate({ sourceValidationId: contentId })
     }
+  }
+
+  const handleRetryQuiz = () => {
+    createQuizMutation.reset()
+    createQuizMutation.mutate({ sourceValidationId: contentId })
   }
 
   return (
@@ -132,7 +140,7 @@ export function LearningPreparationPage() {
             <p aria-live="polite" className="text-caption font-semibold text-text-secondary">
               {complete
                 ? '모든 준비가 완료되었습니다.'
-                : isRejected
+                : isRejected || isValidationError || isQuizCreateError
                   ? '문제가 발생했습니다.'
                   : preparationSteps[activeStage].description}
             </p>
@@ -154,13 +162,13 @@ export function LearningPreparationPage() {
           <section className="preparation-stage-panel" aria-label="퀴즈 생성 단계">
             <div className="preparation-panel-header">
               <span>PROCESS PIPELINE</span>
-              <span>{complete ? 'COMPILED' : isRejected ? 'HALTED' : 'RUNNING'}</span>
+              <span>{complete ? 'COMPILED' : isRejected || isValidationError || isQuizCreateError ? 'HALTED' : 'RUNNING'}</span>
             </div>
             <ol className="preparation-stage-list">
               {preparationSteps.map((step, index) => {
                 const isComplete = index < activeStage
-                const isActive = index === activeStage && !complete && !isRejected
-                const isErrorState = index === activeStage && isRejected
+                const isActive = index === activeStage && !complete && !isRejected && !isValidationError && !isQuizCreateError
+                const isErrorState = index === activeStage && (isRejected || isValidationError || isQuizCreateError)
 
                 return (
                   <li
@@ -187,10 +195,43 @@ export function LearningPreparationPage() {
 
           <section className="preparation-graph-panel" aria-labelledby="graph-title">
             <div className="preparation-panel-header">
-              <span id="graph-title">{isRejected ? 'PROCESS ERROR' : 'KNOWLEDGE MAP'}</span>
-              <span>{isRejected ? 'FAILED' : 'LIVE'}</span>
+              <span id="graph-title">{isRejected || isValidationError || isQuizCreateError ? 'PROCESS ERROR' : 'KNOWLEDGE MAP'}</span>
+              <span>{isRejected || isValidationError || isQuizCreateError ? 'FAILED' : 'LIVE'}</span>
             </div>
-            {isRejected ? (
+            {isQuizCreateError ? (
+              <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
+                <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
+                <p className="mt-4 text-label font-medium text-text-primary">
+                  퀴즈 생성 중 오류가 발생했습니다.
+                </p>
+                <div className="mt-6 w-full max-w-[200px]">
+                  <Button
+                    fullWidth
+                    loading={createQuizMutation.isPending}
+                    onClick={handleRetryQuiz}
+                    variant="primary"
+                  >
+                    퀴즈 생성 재시도
+                  </Button>
+                </div>
+              </div>
+            ) : isValidationError ? (
+              <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
+                <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
+                <p className="mt-4 text-label font-medium text-text-primary">
+                  검증 상태를 가져오지 못했습니다.
+                </p>
+                <div className="mt-6 w-full max-w-[200px]">
+                  <Button
+                    fullWidth
+                    onClick={() => void retryValidation()}
+                    variant="primary"
+                  >
+                    다시 시도
+                  </Button>
+                </div>
+              </div>
+            ) : isRejected ? (
               <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
                 <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
                 <p className="mt-4 text-label font-medium text-text-primary">
@@ -227,7 +268,7 @@ export function LearningPreparationPage() {
             <p className="text-caption font-semibold text-text-secondary">
               {complete
                 ? '생성 결과를 확인할 준비가 됐습니다.'
-                : isRejected
+                : isRejected || isValidationError || isQuizCreateError
                   ? '진행이 중단되었습니다.'
                   : '잠시만 기다려 주세요.'}
             </p>

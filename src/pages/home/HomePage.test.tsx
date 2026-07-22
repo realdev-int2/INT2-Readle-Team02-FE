@@ -10,6 +10,7 @@ import { HomePage } from '@/pages/home/HomePage'
 import * as contentApi from '@/shared/api/content'
 import { mockExtractedContent } from '@/mocks/fixtures/content'
 import { ApiError } from '@/shared/api/error'
+import type { ContentExtractResponse } from '@/shared/api/types'
 
 vi.mock('@/shared/api/content')
 
@@ -249,7 +250,7 @@ describe('HomePage', () => {
 
   describe('경쟁 조건(Race Condition) 방어 테스트', () => {
     it('URL -> TEXT -> URL 탭 전환 시 이전 추출 요청의 지연 응답을 무시한다', async () => {
-      let resolveFirstExtract!: (value: unknown) => void
+      let resolveFirstExtract!: (value: ContentExtractResponse) => void
       
       // 첫 번째 요청은 지연되도록 설정
       vi.mocked(contentApi.extractContent).mockImplementationOnce(() => {

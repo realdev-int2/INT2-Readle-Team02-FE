@@ -132,7 +132,11 @@ export function LearningPreparationPage() {
               </p>
             </div>
             <h1 className="mt-3 text-title font-bold text-text-primary sm:text-[2.25rem]" id="preparation-title">
-              {complete ? '퀴즈 생성 준비가 완료됐습니다' : '퀴즈를 만들고 있습니다'}
+              {complete
+                ? '퀴즈 생성 준비가 완료됐습니다'
+                : hasPipelineError
+                  ? '퀴즈 생성이 중단되었습니다'
+                  : '퀴즈를 만들고 있습니다'}
             </h1>
             <p className="mt-3 max-w-2xl text-label leading-6 text-text-muted">
               콘텐츠를 분석하고 핵심 개념을 연결해 맞춤형 문제를 구성합니다.

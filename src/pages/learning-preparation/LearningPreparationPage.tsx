@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { Link, generatePath, useNavigate, useParams } from 'react-router'
+import { useCreateQuiz } from '@/pages/learning-preparation/api/useCreateQuiz'
+import { useValidationPolling } from '@/pages/learning-preparation/api/useValidationPolling'
 import { ROUTES } from '@/shared/config/routes'
+import { Button } from '@/shared/ui/Button'
 import '@/pages/learning-preparation/LearningPreparationPage.css'
 
 const preparationSteps = [
@@ -9,8 +12,6 @@ const preparationSteps = [
   { code: 'CONNECT', description: '핵심 개념과 연관 태그를 연결합니다.', label: '지식 구조 연결' },
   { code: 'GENERATE', description: '학습 목표에 맞는 문제를 구성합니다.', label: '맞춤형 퀴즈 생성' },
 ] as const
-
-const stageDelay = 900
 
 function KnowledgeGraph({ complete }: { complete: boolean }) {
   return (
@@ -34,17 +35,76 @@ function KnowledgeGraph({ complete }: { complete: boolean }) {
 }
 
 export function LearningPreparationPage() {
-  const [activeStage, setActiveStage] = useState(0)
+  const navigate = useNavigate()
+  const { contentId: contentIdParam } = useParams<{ contentId: string }>()
+  const contentId = Number(contentIdParam)
+  const [hasAdvancedToGenerate, setHasAdvancedToGenerate] = useState(false)
+  const isRoutingRef = useRef(false)
+
+  const { data: validationResponse } = useValidationPolling(contentId)
+  const validationStatus = validationResponse?.status
+
+  const createQuizMutation = useCreateQuiz()
+
+  // API 상태에 따라 렌더링 시점에 바로 activeStage 도출 (You might not need an effect)
+  let activeStage = 1 // 1: VALIDATE(시작/진행 중)
+  if (validationStatus === 'PASSED') {
+    if (createQuizMutation.isSuccess) {
+      activeStage = 4 // 모든 단계 완료
+    } else {
+      activeStage = hasAdvancedToGenerate ? 3 : 2 // CONNECT -> GENERATE 전환
+    }
+  }
+
+  // PASSED 시 자동 퀴즈 생성 트리거
+  useEffect(() => {
+    if (
+      validationStatus === 'PASSED' &&
+      !createQuizMutation.isPending &&
+      !createQuizMutation.isSuccess &&
+      !createQuizMutation.isError
+    ) {
+      createQuizMutation.mutate({ sourceValidationId: contentId })
+    }
+  }, [validationStatus, createQuizMutation, contentId])
+
+  // 퀴즈 생성이 진행 중일 때, CONNECT(2) -> GENERATE(3)로 자연스럽게 넘어가는 시각적 지연(Fake Progress) 추가
+  useEffect(() => {
+    if (activeStage === 2 && createQuizMutation.isPending) {
+      const timer = window.setTimeout(() => {
+        setHasAdvancedToGenerate(true)
+      }, 1000) // 1초 후 GENERATE 단계로 전환
+      return () => window.clearTimeout(timer)
+    }
+  }, [activeStage, createQuizMutation.isPending])
+
+  // 퀴즈 생성 성공 시 4단계 완료 처리 및 라우팅
+  useEffect(() => {
+    if (createQuizMutation.isSuccess && createQuizMutation.data && !isRoutingRef.current) {
+      isRoutingRef.current = true
+      const quizId = createQuizMutation.data.data.quizId
+      const timer = window.setTimeout(() => {
+        void navigate(generatePath(ROUTES.quiz, { quizId: String(quizId) }))
+      }, 1000)
+
+      return () => window.clearTimeout(timer)
+    }
+  }, [createQuizMutation.isSuccess, createQuizMutation.data, navigate])
+
   const complete = activeStage >= preparationSteps.length
   const progress = complete ? 100 : Math.round(((activeStage + 0.35) / preparationSteps.length) * 100)
 
-  useEffect(() => {
-    const timers = preparationSteps.map((_, index) =>
-      window.setTimeout(() => setActiveStage(index + 1), stageDelay * (index + 1)),
-    )
+  const isRejected = validationStatus === 'REJECTED' || validationStatus === 'FAILED' || createQuizMutation.isError
+  const errorMessage = createQuizMutation.isError
+    ? '퀴즈 생성 중 오류가 발생했습니다.'
+    : (validationResponse?.message ?? '콘텐츠 검증 중 문제가 발생했습니다.')
+  const bypassAvailable = validationResponse?.bypassAvailable ?? false
 
-    return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [])
+  const handleBypass = () => {
+    if (!createQuizMutation.isPending) {
+      createQuizMutation.mutate({ sourceValidationId: contentId })
+    }
+  }
 
   return (
     <main className="preparation-page">
@@ -64,13 +124,17 @@ export function LearningPreparationPage() {
               콘텐츠를 분석하고 핵심 개념을 연결해 맞춤형 문제를 구성합니다.
             </p>
           </div>
-          <span className="preparation-mock-badge">MOCK PROCESS</span>
+          <span className="preparation-mock-badge">LIVE PROCESS</span>
         </div>
 
         <div className="preparation-progress mt-8">
           <div className="flex items-center justify-between gap-4">
             <p aria-live="polite" className="text-caption font-semibold text-text-secondary">
-              {complete ? '모든 준비가 완료되었습니다.' : preparationSteps[activeStage].description}
+              {complete
+                ? '모든 준비가 완료되었습니다.'
+                : isRejected
+                  ? '문제가 발생했습니다.'
+                  : preparationSteps[activeStage].description}
             </p>
             <strong className="font-mono text-label text-brand-400">{progress}%</strong>
           </div>
@@ -90,27 +154,30 @@ export function LearningPreparationPage() {
           <section className="preparation-stage-panel" aria-label="퀴즈 생성 단계">
             <div className="preparation-panel-header">
               <span>PROCESS PIPELINE</span>
-              <span>{complete ? 'COMPILED' : 'RUNNING'}</span>
+              <span>{complete ? 'COMPILED' : isRejected ? 'HALTED' : 'RUNNING'}</span>
             </div>
             <ol className="preparation-stage-list">
               {preparationSteps.map((step, index) => {
                 const isComplete = index < activeStage
-                const isActive = index === activeStage && !complete
+                const isActive = index === activeStage && !complete && !isRejected
+                const isErrorState = index === activeStage && isRejected
 
                 return (
                   <li
-                    aria-current={isActive ? 'step' : undefined}
-                    className={`preparation-stage ${isActive ? 'preparation-stage-active' : ''} ${isComplete ? 'preparation-stage-complete' : ''}`}
+                    aria-current={isActive || isErrorState ? 'step' : undefined}
+                    className={`preparation-stage ${isActive ? 'preparation-stage-active' : ''} ${isComplete ? 'preparation-stage-complete' : ''} ${isErrorState ? 'opacity-50 grayscale' : ''}`}
                     key={step.code}
                   >
-                    <span className="preparation-stage-number">{isComplete ? '✓' : `0${index + 1}`}</span>
+                    <span className="preparation-stage-number">
+                      {isComplete ? '✓' : isErrorState ? '⚠' : `0${index + 1}`}
+                    </span>
                     <span className="min-w-0">
                       <span className="preparation-stage-code">{step.code}</span>
                       <strong className="preparation-stage-label">{step.label}</strong>
                       <span className="preparation-stage-description">{step.description}</span>
                     </span>
                     <span aria-hidden="true" className="preparation-stage-state">
-                      {isComplete ? 'DONE' : isActive ? 'RUNNING' : 'WAITING'}
+                      {isComplete ? 'DONE' : isErrorState ? 'ERROR' : isActive ? 'RUNNING' : 'WAITING'}
                     </span>
                   </li>
                 )
@@ -120,28 +187,57 @@ export function LearningPreparationPage() {
 
           <section className="preparation-graph-panel" aria-labelledby="graph-title">
             <div className="preparation-panel-header">
-              <span id="graph-title">KNOWLEDGE MAP</span>
-              <span>LIVE</span>
+              <span id="graph-title">{isRejected ? 'PROCESS ERROR' : 'KNOWLEDGE MAP'}</span>
+              <span>{isRejected ? 'FAILED' : 'LIVE'}</span>
             </div>
-            <KnowledgeGraph complete={complete} />
-            <div className="preparation-tags" aria-label="감지된 핵심 태그">
-              <span>#architecture</span>
-              <span>#backend</span>
-              <span>#transaction</span>
-            </div>
+            {isRejected ? (
+              <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
+                <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
+                <p className="mt-4 text-label font-medium text-text-primary">
+                  {errorMessage}
+                </p>
+                {bypassAvailable && (
+                  <div className="mt-6 w-full max-w-[200px]">
+                    <Button
+                      fullWidth
+                      loading={createQuizMutation.isPending}
+                      onClick={handleBypass}
+                      variant="danger"
+                    >
+                      무시하고 퀴즈 만들기
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <KnowledgeGraph complete={complete} />
+                <div className="preparation-tags" aria-label="감지된 핵심 태그">
+                  <span>#architecture</span>
+                  <span>#backend</span>
+                  <span>#transaction</span>
+                </div>
+              </>
+            )}
           </section>
         </div>
 
         <footer className="preparation-footer">
           <div>
             <p className="text-caption font-semibold text-text-secondary">
-              {complete ? '생성 결과를 확인할 준비가 됐습니다.' : '잠시만 기다려 주세요.'}
+              {complete
+                ? '생성 결과를 확인할 준비가 됐습니다.'
+                : isRejected
+                  ? '진행이 중단되었습니다.'
+                  : '잠시만 기다려 주세요.'}
             </p>
             <p className="mt-1 text-[0.6875rem] leading-5 text-text-muted">
               실제 API 연동 후 서버의 생성 상태와 동기화됩니다.
             </p>
           </div>
-          <Link className="preparation-back-link" to={ROUTES.home}>입력 화면으로 돌아가기</Link>
+          <Link className="preparation-back-link" to={ROUTES.home}>
+            입력 화면으로 돌아가기
+          </Link>
         </footer>
       </section>
     </main>

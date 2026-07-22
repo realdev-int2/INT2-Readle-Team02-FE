@@ -113,8 +113,8 @@ export const contentHandlers = [
 
     const scenario = resolveValidationScenario(request, contentId)
 
-    return HttpResponse.json({
-      data: mockValidationResponses[scenario],
-    })
+    return HttpResponse.json(
+      mockValidationResponses[scenario]
+    )
   }),
 ]

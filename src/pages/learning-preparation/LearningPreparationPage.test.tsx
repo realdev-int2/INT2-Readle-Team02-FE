@@ -2,13 +2,23 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { LearningPreparationPage } from '@/pages/learning-preparation/LearningPreparationPage'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false },
+  },
+})
 
 describe('LearningPreparationPage', () => {
   it('긴 생성 과정을 확인할 수 있는 전용 페이지를 렌더링한다', () => {
     const html = renderToStaticMarkup(
-      <MemoryRouter>
-        <LearningPreparationPage />
-      </MemoryRouter>,
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <LearningPreparationPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
     )
 
     expect(html).toContain('READLE KNOWLEDGE COMPILER')

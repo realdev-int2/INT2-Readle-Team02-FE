@@ -48,10 +48,8 @@ describe('contentHandlers', () => {
 
     expect(response.status).toBe(200)
     expect(body).toMatchObject({
-      data: {
-        errorCode: 'AI_SERVICE_ERROR',
-        status: 'FAILED',
-      },
+      errorCode: 'AI_SERVICE_ERROR',
+      status: 'FAILED',
     })
   })
 })

@@ -1,6 +1,5 @@
 import { apiRequest } from '@/shared/api/client'
 import type {
-  ApiResponse,
   ContentValidationResponse,
   ContentCreateRequest,
   ContentCreateResponse,
@@ -25,7 +24,7 @@ export function createContent(request: ContentCreateRequest) {
 }
 
 export function getContentValidation(contentId: number) {
-  return apiRequest<ApiResponse<ContentValidationResponse>>(
+  return apiRequest<ContentValidationResponse>(
     `/contents/${contentId}/validation`,
     { requiresAuth: true },
   )

@@ -7,6 +7,7 @@ CANDIDATE="readle-frontend-candidate"
 NETWORK="readle-public"
 EDGE="readle-nginx"
 STATE_FILE="/var/lib/readle/frontend-deploy.env"
+HOST_CANDIDATE_LOCK_FILE="${READLE_HOST_CANDIDATE_LOCK_FILE:-/run/lock/readle-candidate-deploy.lock}"
 LOCK_FILE="/run/lock/readle-frontend-deploy.lock"
 DEPLOY_LABEL="io.readle.frontend.image-ref"
 
@@ -176,7 +177,7 @@ load_state() {
 }
 
 podman_cmd() {
-  9>&- podman "$@"
+  8>&- 9>&- podman "$@"
 }
 
 container_exists() {
@@ -255,7 +256,7 @@ wait_healthy() {
   local name="$1"
   local status
   for _ in {1..30}; do
-    status="$(podman_cmd inspect "$name" --format '{{.State.Healthcheck.Status}}' 2>/dev/null || true)"
+    status="$(podman_cmd inspect "$name" --format '{{.State.Health.Status}}' 2>/dev/null || true)"
     [[ "$status" == "healthy" ]] && return 0
     sleep 1
   done
@@ -318,6 +319,18 @@ restore_image() {
   local image="$1"
   local revision="$2"
   local deploy_ref="${3:-$image}"
+  restore_live_runtime "$image" "$revision" "$deploy_ref" || return 1
+  last_good_image="$image"
+  last_good_revision="$revision"
+  last_good_ref="$deploy_ref"
+  clear_pending
+  save_state
+}
+
+restore_live_runtime() {
+  local image="$1"
+  local revision="$2"
+  local deploy_ref="${3:-$image}"
   local restore_target="$image"
   [[ -n "$image" && -n "$revision" && -n "$deploy_ref" ]] || return 1
   if ! image_exists "$image"; then
@@ -335,27 +348,78 @@ restore_image() {
   replace_live "$restore_target" "$deploy_ref" || return 1
   restart_edge || return 1
   edge_smoke_retry || return 1
-  last_good_image="$image"
-  last_good_revision="$revision"
-  last_good_ref="$deploy_ref"
+}
+
+save_pending_rollback_or_fail() {
+  if save_state; then
+    return 0
+  fi
+  podman_cmd rm -f "$CANDIDATE" >/dev/null || true
+  die "failed to persist pending rollback state"
+}
+
+restore_pre_deploy_after_final_save_failure() {
+  local rollback_image="$1"
+  local rollback_revision="$2"
+  local rollback_ref="$3"
+  local pre_last_good_image="$4"
+  local pre_last_good_revision="$5"
+  local pre_last_good_ref="$6"
+  local pre_previous_image="$7"
+  local pre_previous_revision="$8"
+  local pre_previous_ref="$9"
+
+  restore_live_runtime "$rollback_image" "$rollback_revision" "$rollback_ref" || return 1
+  last_good_image="$pre_last_good_image"
+  last_good_revision="$pre_last_good_revision"
+  last_good_ref="$pre_last_good_ref"
+  previous_image="$pre_previous_image"
+  previous_revision="$pre_previous_revision"
+  previous_ref="$pre_previous_ref"
   clear_pending
   save_state
 }
 
+acquire_deploy_locks() {
+  exec 8>"$HOST_CANDIDATE_LOCK_FILE"
+  flock -w 120 -x 8 || die "timed out waiting 120 seconds for host candidate deployment lock"
+  exec 9>"$LOCK_FILE"
+  flock -w 120 -x 9 || die "timed out waiting 120 seconds for deployment lock"
+}
+
 self_test() {
-  local good_sha good_digest good_image_id raw_good_image_id lock_probe original_repository_file original_state repository_file run_log state_file
+  local candidate_lock_probe frontend_lock_probe good_sha good_digest good_image_id raw_good_image_id lock_probe original_repository_file original_state repository_file run_log state_file
 
   (
     lock_probe="$(mktemp)"
-    trap 'status=$?; exec 9>&-; unset -f podman; rm -f "$lock_probe"; exit "$status"' EXIT
+    trap 'status=$?; exec 8>&-; exec 9>&-; unset -f podman; rm -f "$lock_probe"; exit "$status"' EXIT
+    exec 8>"$lock_probe"
     exec 9>"$lock_probe"
     podman() {
+      if { : >&8; } 2>/dev/null; then
+        return 1
+      fi
       if { : >&9; } 2>/dev/null; then
         return 1
       fi
       return 0
     }
     podman_cmd self-test
+  )
+
+  candidate_lock_probe="$(mktemp)"
+  frontend_lock_probe="$(mktemp)"
+  (
+    trap 'status=$?; exec 8>&-; exec 9>&-; rm -f "$candidate_lock_probe" "$frontend_lock_probe"; exit "$status"' EXIT
+    HOST_CANDIDATE_LOCK_FILE="$candidate_lock_probe"
+    LOCK_FILE="$frontend_lock_probe"
+    SELFTEST_LOCK_ORDER=""
+    flock() {
+      [[ "$*" == "-w 120 -x 8" || "$*" == "-w 120 -x 9" ]] || return 1
+      SELFTEST_LOCK_ORDER+="${1}:${2}:${3}:${4};"
+    }
+    acquire_deploy_locks
+    [[ "$SELFTEST_LOCK_ORDER" == "-w:120:-x:8;-w:120:-x:9;" ]]
   )
 
   original_repository_file="$IMAGE_REPOSITORY_FILE"
@@ -584,6 +648,88 @@ self_test() {
   [[ ! -s "$run_log" ]]
   rm -f "$run_log"
 
+  run_log="$(mktemp)"
+  save_state() {
+    printf '%s\n' \
+      "pending_rollback_image=$pending_rollback_image" \
+      "pending_rollback_revision=$pending_rollback_revision" \
+      "pending_rollback_ref=$pending_rollback_ref" >> "$run_log"
+    return 1
+  }
+  podman_cmd() {
+    [[ "$1" == "rm" && "$2" == "-f" && "$3" == "$CANDIDATE" ]] || return 1
+    printf '%s\n' "$*" >> "$run_log"
+  }
+  pending_rollback_image="$good_image_id"
+  pending_rollback_revision="$good_sha"
+  pending_rollback_ref="$good_digest"
+  ( save_pending_rollback_or_fail ) && exit 1
+  grep -qx "pending_rollback_image=$good_image_id" "$run_log"
+  grep -qx "pending_rollback_revision=$good_sha" "$run_log"
+  grep -qx "pending_rollback_ref=$good_digest" "$run_log"
+  grep -qx "rm -f $CANDIDATE" "$run_log"
+  rm -f "$run_log"
+
+  run_log="$(mktemp)"
+  state_file="$(mktemp)"
+  SELFTEST_SAVE_COUNT=0
+  save_state() {
+    SELFTEST_SAVE_COUNT=$((SELFTEST_SAVE_COUNT + 1))
+    {
+      printf 'last_good_image=%s\n' "$last_good_image"
+      printf 'last_good_revision=%s\n' "$last_good_revision"
+      printf 'last_good_ref=%s\n' "$last_good_ref"
+      printf 'previous_image=%s\n' "$previous_image"
+      printf 'previous_revision=%s\n' "$previous_revision"
+      printf 'previous_ref=%s\n' "$previous_ref"
+      printf 'pending_rollback_image=%s\n' "$pending_rollback_image"
+      printf 'pending_rollback_revision=%s\n' "$pending_rollback_revision"
+      printf 'pending_rollback_ref=%s\n' "$pending_rollback_ref"
+    } > "$state_file"
+    [[ "$SELFTEST_SAVE_COUNT" != 1 ]]
+  }
+  image_exists() { return 0; }
+  replace_live() {
+    [[ "$1" == "$good_image_id" && "$2" == "$good_digest" ]] || return 1
+    printf '%s\n' "replace_live $1 $2" >> "$run_log"
+  }
+  restart_edge() { :; }
+  edge_smoke_retry() { :; }
+  last_good_image="sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  last_good_revision="4444444444444444444444444444444444444444"
+  last_good_ref="${IMAGE_PREFIX}@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  previous_image="$good_image_id"
+  previous_revision="$good_sha"
+  previous_ref="$good_digest"
+  pending_rollback_image=""
+  pending_rollback_revision=""
+  pending_rollback_ref=""
+  save_state && exit 1
+  restore_pre_deploy_after_final_save_failure "$previous_image" "$previous_revision" "$previous_ref" \
+    "$raw_good_image_id" "$good_sha" "$good_digest" \
+    "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" \
+    "2222222222222222222222222222222222222222" \
+    "${IMAGE_PREFIX}@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  grep -qx "replace_live $good_image_id $good_digest" "$run_log"
+  grep -qx "last_good_image=$raw_good_image_id" "$state_file"
+  grep -qx "last_good_revision=$good_sha" "$state_file"
+  grep -qx "last_good_ref=$good_digest" "$state_file"
+  grep -qx "previous_image=sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" "$state_file"
+  grep -qx "previous_revision=2222222222222222222222222222222222222222" "$state_file"
+  grep -qx "previous_ref=${IMAGE_PREFIX}@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" "$state_file"
+  grep -qx "pending_rollback_image=" "$state_file"
+  grep -qx "pending_rollback_revision=" "$state_file"
+  grep -qx "pending_rollback_ref=" "$state_file"
+  rm -f "$run_log" "$state_file"
+
+  save_state() { return 1; }
+  image_exists() { return 0; }
+  replace_live() { :; }
+  restart_edge() { :; }
+  edge_smoke_retry() { :; }
+  restore_pre_deploy_after_final_save_failure "$good_image_id" "$good_sha" "$good_digest" \
+    "$raw_good_image_id" "$good_sha" "$good_digest" "" "" "" && exit 1
+
   rm -f "$repository_file"
   unset IMAGE_PREFIX
   IMAGE_REPOSITORY_FILE="$original_repository_file"
@@ -593,6 +739,9 @@ self_test() {
 main() {
   [[ "${1:-}" != "--self-test" ]] || { self_test; return; }
 
+  local pre_deploy_last_good_image pre_deploy_last_good_revision pre_deploy_last_good_ref
+  local pre_deploy_previous_image pre_deploy_previous_revision pre_deploy_previous_ref
+
   load_image_prefix || die "missing or invalid image repository file: $IMAGE_REPOSITORY_FILE"
 
   local image_ref="${1:-}"
@@ -601,8 +750,7 @@ main() {
   validate_image_ref "$image_ref" || die "image must be ${IMAGE_PREFIX}@sha256:<64 lowercase hex>"
   validate_sha "$expected_sha" || die "expected SHA must be 40 lowercase hex characters"
 
-  exec 9>"$LOCK_FILE"
-  flock -w 120 -x 9 || die "timed out waiting 120 seconds for deployment lock"
+  acquire_deploy_locks
 
   load_state || die "failed to load deployment state"
   remove_stale_candidate
@@ -629,6 +777,13 @@ main() {
     restore_image "$pending_rollback_image" "$pending_rollback_revision" "${pending_rollback_ref:-$pending_rollback_image}" || die "pending rollback failed"
   fi
 
+  pre_deploy_last_good_image="$last_good_image"
+  pre_deploy_last_good_revision="$last_good_revision"
+  pre_deploy_last_good_ref="$last_good_ref"
+  pre_deploy_previous_image="$previous_image"
+  pre_deploy_previous_revision="$previous_revision"
+  pre_deploy_previous_ref="$previous_ref"
+
   podman_cmd pull "$image_ref" >/dev/null
   [[ "$(image_revision "$image_ref")" == "$expected_sha" ]] || die "image revision label does not match expected SHA"
 
@@ -639,7 +794,7 @@ main() {
   pending_rollback_revision="$(container_revision "$LIVE" 2>/dev/null || true)"
   pending_rollback_ref="$(container_deploy_ref "$LIVE")"
   [[ -n "$pending_rollback_ref" ]] || pending_rollback_ref="$pending_rollback_image"
-  save_state
+  save_pending_rollback_or_fail
 
   podman_cmd rm -f "$CANDIDATE" >/dev/null
   if ! replace_live "$image_ref" "$image_ref"; then
@@ -658,7 +813,14 @@ main() {
   last_good_revision="$expected_sha"
   last_good_ref="$image_ref"
   clear_pending
-  save_state
+  if ! save_state; then
+    if restore_pre_deploy_after_final_save_failure "$previous_image" "$previous_revision" "$previous_ref" \
+      "$pre_deploy_last_good_image" "$pre_deploy_last_good_revision" "$pre_deploy_last_good_ref" \
+      "$pre_deploy_previous_image" "$pre_deploy_previous_revision" "$pre_deploy_previous_ref"; then
+      die "failed to persist deployed frontend state; restored previous frontend"
+    fi
+    die "failed to persist deployed frontend state; cleanup persist failed"
+  fi
   log "deployed $expected_sha"
 }
 

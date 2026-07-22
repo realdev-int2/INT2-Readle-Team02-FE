@@ -17,7 +17,7 @@ export function extractContent(request: ContentExtractRequest) {
 }
 
 export function createContent(request: ContentCreateRequest) {
-  return apiRequest<ApiResponse<ContentCreateResponse>>('/contents', {
+  return apiRequest<ContentCreateResponse>('/contents', {
     body: request,
     method: 'POST',
     requiresAuth: true,

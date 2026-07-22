@@ -96,9 +96,7 @@ export const contentHandlers = [
     validationPollCounts.set(String(MOCK_CONTENT_ID), 0)
 
     return HttpResponse.json(
-      {
-        data: mockCreatedContent,
-      },
+      mockCreatedContent,
       { status: 201 },
     )
   }),

@@ -8,23 +8,29 @@ import {
 } from '@/pages/home/model/contentInputValidation'
 import { ROUTES } from '@/shared/config/routes'
 import { Button, ErrorMessage } from '@/shared/ui'
-import { useExtractContent } from '@/pages/home/api/useExtractContent'
+import { useContentForm } from '@/pages/home/model/useContentForm'
 import '@/pages/home/HomePage.css'
 
 export function HomePage() {
-  const navigate = useNavigate()
-  const [mode, setMode] = useState<InputMode>('url')
-  const [urlValues, setUrlValues] = useState<ContentInputValues>(initialContentInputValues)
-  const [textValues, setTextValues] = useState<ContentInputValues>(initialContentInputValues)
-  const [touched, setTouched] = useState<Record<string, boolean>>({})
-  const [extractError, setExtractError] = useState<string | null>(null)
-  const [isExtracted, setIsExtracted] = useState(false)
-  
+  const {
+    mode,
+    values,
+    touched,
+    errors,
+    isValid,
+    isExtracted,
+    isExtractPending,
+    isCreatePending,
+    extractErrorMsg,
+    createErrorMsg,
+    changeMode,
+    resetExtractState,
+    updateValue,
+    handleBlur,
+    handleSubmit,
+  } = useContentForm()
+
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const extractContent = useExtractContent()
-
-  const values = mode === 'url' ? urlValues : textValues
 
   useLayoutEffect(() => {
     if (textareaRef.current) {
@@ -35,71 +41,6 @@ export function HomePage() {
     }
   }, [values.content, mode, isExtracted])
 
-  const errors = validateContentInput(mode, values, isExtracted)
-  const isValid = Object.keys(errors).length === 0
-
-  function changeMode(nextMode: InputMode) {
-    setMode(nextMode)
-    setTouched({})
-  }
-
-  function resetExtractState() {
-    setUrlValues({ content: '', title: '', url: '' })
-    setTouched({})
-    setExtractError(null)
-    setIsExtracted(false)
-  }
-
-  function updateValue(field: keyof ContentInputValues, value: string) {
-    if (mode === 'url') {
-      if (field === 'url') {
-        setExtractError(null)
-      }
-      setUrlValues((current) => ({ ...current, [field]: value }))
-    } else {
-      setTextValues((current) => ({ ...current, [field]: value }))
-    }
-  }
-
-  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setTouched(
-      mode === 'url'
-        ? isExtracted
-          ? { content: true, title: true, url: true }
-          : { url: true }
-        : { content: true, title: true }
-    )
-    setExtractError(null)
-
-    if (!isValid) {
-      return
-    }
-
-    if (mode === 'url' && !isExtracted) {
-      extractContent.mutate(
-        { url: values.url },
-        {
-          onSuccess: (response) => {
-            setUrlValues((current) => ({
-              ...current,
-              title: response.title,
-              content: response.content,
-            }))
-            setIsExtracted(true)
-          },
-          onError: (error) => {
-            setExtractError(error.message || '본문을 자동으로 가져오지 못했습니다.')
-            setIsExtracted(false)
-          },
-        },
-      )
-      return
-    }
-
-    void navigate(generatePath(ROUTES.learningPreparation, { contentId: 'mock-content' }))
-  }
-
   const renderContentInputs = () => (
     <>
       <label className="sr-only" htmlFor="learning-title">콘텐츠 제목</label>
@@ -108,7 +49,7 @@ export function HomePage() {
         aria-invalid={touched.title && errors.title ? true : undefined}
         className="learn-composer-title"
         id="learning-title"
-        onBlur={() => setTouched((current) => ({ ...current, title: true }))}
+        onBlur={() => handleBlur('title')}
         onChange={(event) => updateValue('title', event.target.value)}
         placeholder="콘텐츠 제목"
         value={values.title}
@@ -120,9 +61,9 @@ export function HomePage() {
       <textarea
         aria-describedby={`content-character-count${touched.content && errors.content ? ' learning-content-error' : ''}`}
         aria-invalid={touched.content && errors.content ? true : undefined}
-        className={`learn-composer-textarea ${mode === 'url' ? 'mt-3' : ''}`}
+        className={`learn-composer-textarea ${mode === 'URL' ? 'mt-3' : ''}`}
         id="learning-content"
-        onBlur={() => setTouched((current) => ({ ...current, content: true }))}
+        onBlur={() => handleBlur('content')}
         onChange={(event) => updateValue('content', event.target.value)}
         placeholder="학습하고 싶은 기술 콘텐츠를 붙여넣어 주세요"
         ref={textareaRef}
@@ -152,10 +93,10 @@ export function HomePage() {
               <div aria-label="콘텐츠 입력 방식" className="learn-method-tabs" role="tablist">
                 <button
                   aria-controls="url-input-panel"
-                  aria-selected={mode === 'url'}
-                  className={`learn-method-tab ${mode === 'url' ? 'learn-method-tab-active' : ''}`}
+                  aria-selected={mode === 'URL'}
+                  className={`learn-method-tab ${mode === 'URL' ? 'learn-method-tab-active' : ''}`}
                   id="url-input-tab"
-                  onClick={() => changeMode('url')}
+                  onClick={() => changeMode('URL')}
                   role="tab"
                   type="button"
                 >
@@ -163,10 +104,10 @@ export function HomePage() {
                 </button>
                 <button
                   aria-controls="text-input-panel"
-                  aria-selected={mode === 'text'}
-                  className={`learn-method-tab ${mode === 'text' ? 'learn-method-tab-active' : ''}`}
+                  aria-selected={mode === 'TEXT'}
+                  className={`learn-method-tab ${mode === 'TEXT' ? 'learn-method-tab-active' : ''}`}
                   id="text-input-tab"
-                  onClick={() => changeMode('text')}
+                  onClick={() => changeMode('TEXT')}
                   role="tab"
                   type="button"
                 >
@@ -175,15 +116,15 @@ export function HomePage() {
               </div>
             </div>
             <p className="text-caption text-text-muted">
-              {mode === 'url' ? '페이지 제목과 본문을 자동으로 가져옵니다.' : '제목과 본문을 직접 입력합니다.'}
+              {mode === 'URL' ? '페이지 제목과 본문을 자동으로 가져옵니다.' : '제목과 본문을 직접 입력합니다.'}
             </p>
           </div>
 
           <form className="learn-composer mt-3" noValidate onSubmit={handleSubmit}>
-            {mode === 'url' ? (
+            {mode === 'URL' ? (
               <div aria-labelledby="url-input-tab" id="url-input-panel" role="tabpanel">
                 {isExtracted && (
-                  urlValues.content.trim().length > 0 ? (
+                  values.content.trim().length > 0 ? (
                     <p className="mb-4 rounded-md border border-status-success/30 bg-status-success/10 px-4 py-3 text-sm font-medium text-status-success">
                       ✅ 첨부한 URL의 제목과 본문을 성공적으로 불러왔습니다!
                     </p>
@@ -198,13 +139,13 @@ export function HomePage() {
                   <div className="flex-1">
                     <label className="sr-only" htmlFor="learning-url">기술 아티클 URL</label>
                     <input
-                      aria-describedby={(touched.url && errors.url) || extractError ? 'learning-url-error' : undefined}
-                      aria-invalid={(touched.url && errors.url) || extractError ? true : undefined}
+                      aria-describedby={(touched.url && errors.url) || extractErrorMsg ? 'learning-url-error' : undefined}
+                      aria-invalid={(touched.url && errors.url) || extractErrorMsg ? true : undefined}
                       autoComplete="url"
                       className="learn-composer-input disabled:opacity-50"
-                      disabled={isExtracted || extractContent.isPending}
+                      disabled={isExtracted || isExtractPending}
                       id="learning-url"
-                      onBlur={() => setTouched((current) => ({ ...current, url: true }))}
+                      onBlur={() => handleBlur('url')}
                       onChange={(event) => updateValue('url', event.target.value)}
                       placeholder="학습할 기술 아티클 URL을 붙여넣어 주세요"
                       type="url"
@@ -224,7 +165,7 @@ export function HomePage() {
                 </div>
                 
                 <ErrorMessage className="mt-2 px-2" id="learning-url-error">
-                  {(touched.url ? errors.url : null) || (!errors.url ? extractError : null)}
+                  {(touched.url ? errors.url : null) || (!errors.url ? extractErrorMsg : null)}
                 </ErrorMessage>
 
                 {isExtracted && (
@@ -240,21 +181,32 @@ export function HomePage() {
             )}
 
             <div className="mt-4 flex flex-col gap-3 border-t border-border-glass pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[0.6875rem] leading-5 text-text-muted">
-                {mode === 'text' || isExtracted ? (
-                  <><span className="font-mono" id="content-character-count">{values.content.length.toLocaleString('ko-KR')}자</span> 입력됨</>
-                ) : (
-                  '공개된 기술 문서와 블로그 URL을 사용할 수 있습니다.'
+              <div className="flex flex-col gap-1">
+                <p className="text-[0.6875rem] leading-5 text-text-muted">
+                  {mode === 'TEXT' || isExtracted ? (
+                    <>
+                      <span className={`font-mono ${errors.content && touched.content ? 'text-status-error' : ''}`} id="content-character-count">
+                        {values.content.length.toLocaleString('ko-KR')}자
+                      </span> 입력됨
+                      {values.content.length < 300 && ' (최소 300자 이상)'}
+                      {values.content.length > 15000 && ' (최대 글자 수 초과)'}
+                    </>
+                  ) : (
+                    '공개된 기술 문서와 블로그 URL을 사용할 수 있습니다.'
+                  )}
+                </p>
+                {createErrorMsg && (
+                  <p className="text-[0.6875rem] leading-5 text-status-error">{createErrorMsg}</p>
                 )}
-              </p>
+              </div>
               <Button 
                 className="learn-submit-button" 
-                disabled={!isValid || extractContent.isPending} 
-                loading={extractContent.isPending}
-                loadingLabel="불러오는 중"
+                disabled={!isValid || isExtractPending || isCreatePending} 
+                loading={isExtractPending || isCreatePending}
+                loadingLabel={isExtractPending ? '불러오는 중' : '등록하는 중'}
                 type="submit"
               >
-                {mode === 'url' && !isExtracted ? '본문 불러오기' : '분석하고 퀴즈 만들기'}
+                {mode === 'URL' && !isExtracted ? '본문 불러오기' : '분석하고 퀴즈 만들기'}
                 <span aria-hidden="true">→</span>
               </Button>
             </div>

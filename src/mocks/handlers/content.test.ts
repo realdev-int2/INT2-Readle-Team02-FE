@@ -42,7 +42,7 @@ describe('contentHandlers', () => {
 
   it('검증 실패 시나리오를 명시적으로 재현한다', async () => {
     const response = await fetch(
-      'http://localhost/api/contents/101/validation?mockScenario=failed',
+      'http://localhost/api/contents/101/validation?mockScenario=FAILED',
     )
     const body = await response.json()
 
@@ -50,7 +50,7 @@ describe('contentHandlers', () => {
     expect(body).toMatchObject({
       data: {
         errorCode: 'AI_SERVICE_ERROR',
-        status: 'failed',
+        status: 'FAILED',
       },
     })
   })

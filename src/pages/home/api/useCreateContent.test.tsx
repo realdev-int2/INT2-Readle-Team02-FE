@@ -32,9 +32,7 @@ describe('useCreateContent', () => {
   })
 
   it('URL 모드로 콘텐츠 등록을 요청하면 성공 응답을 반환해야 한다', async () => {
-    vi.mocked(contentApi.createContent).mockResolvedValueOnce({
-      data: mockCreatedContent,
-    })
+    vi.mocked(contentApi.createContent).mockResolvedValueOnce(mockCreatedContent)
 
     const { result } = renderHook(() => useCreateContent(), { wrapper })
     result.current.mutate({
@@ -48,16 +46,14 @@ describe('useCreateContent', () => {
       expect(result.current.isSuccess).toBe(true)
     })
 
-    expect(result.current.data?.data).toMatchObject({
+    expect(result.current.data).toMatchObject({
       contentId: mockCreatedContent.contentId,
       validationStatus: 'PENDING',
     })
   })
 
   it('TEXT 모드로 콘텐츠 등록을 요청하면 성공 응답을 반환해야 한다', async () => {
-    vi.mocked(contentApi.createContent).mockResolvedValueOnce({
-      data: mockCreatedContent,
-    })
+    vi.mocked(contentApi.createContent).mockResolvedValueOnce(mockCreatedContent)
 
     const { result } = renderHook(() => useCreateContent(), { wrapper })
     result.current.mutate({
@@ -70,7 +66,7 @@ describe('useCreateContent', () => {
       expect(result.current.isSuccess).toBe(true)
     })
 
-    expect(result.current.data?.data.validationStatus).toBe('PENDING')
+    expect(result.current.data?.validationStatus).toBe('PENDING')
   })
 
   it('입력값이 유효하지 않을 때 실패해야 한다', async () => {
@@ -119,7 +115,7 @@ describe('useCreateContent', () => {
       expect(result.current.isPending).toBe(true)
     })
 
-    resolveCreate!({ data: mockCreatedContent })
+    resolveCreate!(mockCreatedContent)
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true)

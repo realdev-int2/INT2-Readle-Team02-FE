@@ -40,6 +40,7 @@ export function LearningPreparationPage() {
   const contentId = Number(contentIdParam)
   const [hasAdvancedToGenerate, setHasAdvancedToGenerate] = useState(false)
   const isRoutingRef = useRef(false)
+  const hasTriggeredCreateRef = useRef(false)
 
   const { data: validationResponse, isError: isValidationError, refetch: retryValidation } = useValidationPolling(contentId)
   const validationStatus = validationResponse?.status
@@ -56,14 +57,16 @@ export function LearningPreparationPage() {
     }
   }
 
-  // PASSED 시 자동 퀴즈 생성 트리거
+  // PASSED 시 자동 퀴즈 생성 트리거 (Strict Mode 중복 호출 방지 ref 가드)
   useEffect(() => {
     if (
       validationStatus === 'PASSED' &&
+      !hasTriggeredCreateRef.current &&
       !createQuizMutation.isPending &&
       !createQuizMutation.isSuccess &&
       !createQuizMutation.isError
     ) {
+      hasTriggeredCreateRef.current = true
       createQuizMutation.mutate({ sourceValidationId: contentId })
     }
   }, [validationStatus, createQuizMutation, contentId])
@@ -94,8 +97,9 @@ export function LearningPreparationPage() {
   const complete = activeStage >= preparationSteps.length
   const progress = complete ? 100 : Math.round(((activeStage + 0.35) / preparationSteps.length) * 100)
 
-  // 상태 분류: 검증 반려, 검증 API 실패, 퀴즈 생성 실패를 각각 분리
-  const isRejected = validationStatus === 'REJECTED' || validationStatus === 'FAILED'
+  // 상태 분류: 검증 반려(REJECTED), 검증 실패(FAILED), 검증 API 조회 오류, 퀴즈 생성 실패를 분리
+  const isRejected = validationStatus === 'REJECTED'
+  const isFailed = validationStatus === 'FAILED'
   const isQuizCreateError = createQuizMutation.isError
   const bypassAvailable = validationResponse?.bypassAvailable ?? false
 
@@ -195,8 +199,8 @@ export function LearningPreparationPage() {
 
           <section className="preparation-graph-panel" aria-labelledby="graph-title">
             <div className="preparation-panel-header">
-              <span id="graph-title">{isRejected || isValidationError || isQuizCreateError ? 'PROCESS ERROR' : 'KNOWLEDGE MAP'}</span>
-              <span>{isRejected || isValidationError || isQuizCreateError ? 'FAILED' : 'LIVE'}</span>
+              <span id="graph-title">{isRejected || isFailed || isValidationError || isQuizCreateError ? 'PROCESS ERROR' : 'KNOWLEDGE MAP'}</span>
+              <span>{isRejected || isFailed || isValidationError || isQuizCreateError ? 'FAILED' : 'LIVE'}</span>
             </div>
             {isQuizCreateError ? (
               <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
@@ -220,6 +224,22 @@ export function LearningPreparationPage() {
                 <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
                 <p className="mt-4 text-label font-medium text-text-primary">
                   검증 상태를 가져오지 못했습니다.
+                </p>
+                <div className="mt-6 w-full max-w-[200px]">
+                  <Button
+                    fullWidth
+                    onClick={() => void retryValidation()}
+                    variant="primary"
+                  >
+                    다시 시도
+                  </Button>
+                </div>
+              </div>
+            ) : isFailed ? (
+              <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
+                <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
+                <p className="mt-4 text-label font-medium text-text-primary">
+                  {errorMessage}
                 </p>
                 <div className="mt-6 w-full max-w-[200px]">
                   <Button
@@ -268,7 +288,7 @@ export function LearningPreparationPage() {
             <p className="text-caption font-semibold text-text-secondary">
               {complete
                 ? '생성 결과를 확인할 준비가 됐습니다.'
-                : isRejected || isValidationError || isQuizCreateError
+                : isRejected || isFailed || isValidationError || isQuizCreateError
                   ? '진행이 중단되었습니다.'
                   : '잠시만 기다려 주세요.'}
             </p>

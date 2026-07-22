@@ -103,6 +103,8 @@ export function LearningPreparationPage() {
   const isQuizCreateError = createQuizMutation.isError
   const bypassAvailable = validationResponse?.bypassAvailable ?? false
 
+  const hasPipelineError = isRejected || isFailed || isValidationError || isQuizCreateError
+
   const errorMessage = isQuizCreateError
     ? '퀴즈 생성 중 오류가 발생했습니다.'
     : (validationResponse?.message ?? '콘텐츠 검증 중 문제가 발생했습니다.')
@@ -144,7 +146,7 @@ export function LearningPreparationPage() {
             <p aria-live="polite" className="text-caption font-semibold text-text-secondary">
               {complete
                 ? '모든 준비가 완료되었습니다.'
-                : isRejected || isValidationError || isQuizCreateError
+                : hasPipelineError
                   ? '문제가 발생했습니다.'
                   : preparationSteps[activeStage].description}
             </p>
@@ -166,13 +168,13 @@ export function LearningPreparationPage() {
           <section className="preparation-stage-panel" aria-label="퀴즈 생성 단계">
             <div className="preparation-panel-header">
               <span>PROCESS PIPELINE</span>
-              <span>{complete ? 'COMPILED' : isRejected || isValidationError || isQuizCreateError ? 'HALTED' : 'RUNNING'}</span>
+              <span>{complete ? 'COMPILED' : hasPipelineError ? 'HALTED' : 'RUNNING'}</span>
             </div>
             <ol className="preparation-stage-list">
               {preparationSteps.map((step, index) => {
                 const isComplete = index < activeStage
-                const isActive = index === activeStage && !complete && !isRejected && !isValidationError && !isQuizCreateError
-                const isErrorState = index === activeStage && (isRejected || isValidationError || isQuizCreateError)
+                const isActive = index === activeStage && !complete && !hasPipelineError
+                const isErrorState = index === activeStage && hasPipelineError
 
                 return (
                   <li
@@ -199,8 +201,8 @@ export function LearningPreparationPage() {
 
           <section className="preparation-graph-panel" aria-labelledby="graph-title">
             <div className="preparation-panel-header">
-              <span id="graph-title">{isRejected || isFailed || isValidationError || isQuizCreateError ? 'PROCESS ERROR' : 'KNOWLEDGE MAP'}</span>
-              <span>{isRejected || isFailed || isValidationError || isQuizCreateError ? 'FAILED' : 'LIVE'}</span>
+              <span id="graph-title">{hasPipelineError ? 'PROCESS ERROR' : 'KNOWLEDGE MAP'}</span>
+              <span>{hasPipelineError ? 'FAILED' : 'LIVE'}</span>
             </div>
             {isQuizCreateError ? (
               <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
@@ -288,7 +290,7 @@ export function LearningPreparationPage() {
             <p className="text-caption font-semibold text-text-secondary">
               {complete
                 ? '생성 결과를 확인할 준비가 됐습니다.'
-                : isRejected || isFailed || isValidationError || isQuizCreateError
+                : hasPipelineError
                   ? '진행이 중단되었습니다.'
                   : '잠시만 기다려 주세요.'}
             </p>

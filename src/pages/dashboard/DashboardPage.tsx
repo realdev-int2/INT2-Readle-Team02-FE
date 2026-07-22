@@ -101,10 +101,13 @@ function AccuracyGauge({ value }: { value: number }) {
 }
 
 function RecentAccuracySparkline({ records }: { records: DashboardData['recentRecords'] }) {
-  const chronologicalRates = [...records].reverse().map((record) => clampAccuracyRate(record.accuracyRate))
-  const latestRecord = records[0]
+  const chronologicalRecords = [...records].sort((left, right) =>
+    left.completedAt.localeCompare(right.completedAt),
+  )
+  const chronologicalRates = chronologicalRecords.map((record) => clampAccuracyRate(record.accuracyRate))
+  const latestRecord = chronologicalRecords.at(-1)
 
-  if (chronologicalRates.length < 2) {
+  if (chronologicalRates.length < 2 || !latestRecord) {
     return <p className="dashboard-trend-empty">학습 기록이 더 쌓이면 최근 정답률 추이를 보여드려요.</p>
   }
 
@@ -147,7 +150,7 @@ function SummaryMetric({ label, unit, value }: { label: string; unit: string; va
   return (
     <div className="dashboard-summary-metric">
       <span>{label}</span>
-      <div><strong>{value}</strong><small>{unit}</small></div>
+      <div><strong>{value.toLocaleString('ko-KR')}</strong><small>{unit}</small></div>
     </div>
   )
 }

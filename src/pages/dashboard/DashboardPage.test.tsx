@@ -20,7 +20,7 @@ vi.mock('@/pages/dashboard/api/dashboard')
 const dashboardFixture: DashboardData = {
   totals: {
     completedQuizCount: 12,
-    totalQuestionCount: 58,
+    totalQuestionCount: 1234,
     tagCount: 2,
     averageAccuracyRate: 78.4,
     lastCompletedAt: '2026-07-16T11:48:00',
@@ -93,6 +93,7 @@ describe('DashboardPage', () => {
     expect(screen.getByText('학습 현황을 불러오고 있습니다')).toBeInTheDocument()
     expect(await screen.findAllByText('Spring @Transactional 심층 이해')).toHaveLength(2)
     expect(screen.getByText('78.4')).toBeInTheDocument()
+    expect(screen.getByText('1,234')).toBeInTheDocument()
     expect(screen.getAllByText('#spring')).toHaveLength(3)
     expect(
       screen.getByRole('img', { name: '최근 2회 정답률 추이: 80%, 60%' }),

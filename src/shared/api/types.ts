@@ -26,11 +26,10 @@ export interface AuthSession {
   uuid: string | null
 }
 
-export type ContentInputType = 'url' | 'text'
+export type ContentInputType = 'URL' | 'TEXT'
 
-export type CrawlStatus = 'not_applicable' | 'success' | 'failed'
 
-export type ValidationStatus = 'pending' | 'passed' | 'rejected' | 'failed'
+export type ValidationStatus = 'PENDING' | 'PASSED' | 'REJECTED' | 'FAILED'
 
 export type ValidationRejectReasonCode =
   | 'EMPTY_CONTENT'
@@ -40,41 +39,41 @@ export type ValidationRejectReasonCode =
   | 'NOT_DEVELOPMENT_RELATED'
   | 'LOW_CONFIDENCE'
 
-export type ValidationErrorCode = 'AI_SERVICE_ERROR' | 'TIMEOUT' | 'UNKNOWN_ERROR'
+export type ValidationErrorCode = 'AI_SERVICE_ERROR' | 'TIMEOUT' | 'SCHEMA_INVALID' | 'UNKNOWN_ERROR'
 
-export interface ExtractContentRequest {
+export interface ContentExtractRequest {
   url: string
 }
 
-export interface ExtractContentResponse {
+export interface ContentExtractResponse {
   content: string
   title: string
 }
 
-export interface CreateContentRequest {
-  inputType: ContentInputType
-  sourceUrl?: string | null
-  title: string
-  text: string
-}
+export type ContentCreateRequest =
+  | {
+      inputType: 'URL'
+      title?: string
+      url: string
+      extractedText: string
+    }
+  | {
+      inputType: 'TEXT'
+      title?: string
+      text: string
+    }
 
-export interface CreateContentResponse {
+export interface ContentCreateResponse {
   contentId: number
-  inputType: ContentInputType
-  crawlStatus: CrawlStatus
-  validation: {
-    status: Extract<ValidationStatus, 'pending'>
-  }
-  createdAt: string
+  validationStatus: ValidationStatus
 }
 
 export interface ContentValidationResponse {
   contentId: number
   status: ValidationStatus
+  errorCode?: ValidationRejectReasonCode | ValidationErrorCode | null
+  message?: string | null
   bypassAvailable?: boolean
-  reject_reason_code?: ValidationRejectReasonCode
-  errorCode?: ValidationErrorCode
-  message?: string
   requestedAt: string
   validatedAt: string | null
 }

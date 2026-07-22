@@ -1,4 +1,4 @@
-export type InputMode = 'url' | 'text'
+export type InputMode = 'URL' | 'TEXT'
 
 export interface ContentInputValues {
   content: string
@@ -35,7 +35,7 @@ export function validateContentInput(
 ): ContentInputErrors {
   const errors: ContentInputErrors = {}
 
-  if (mode === 'url') {
+  if (mode === 'URL') {
     if (!values.url.trim()) {
       errors.url = '학습할 기술 아티클 URL을 입력해 주세요.'
     } else if (!isValidLearningUrl(values.url.trim())) {
@@ -45,14 +45,19 @@ export function validateContentInput(
     if (!isExtracted) {
       return errors
     }
+    
+    if (!values.title.trim()) {
+      errors.title = '콘텐츠 제목을 입력해 주세요.'
+    }
   }
 
-  if (!values.title.trim()) {
-    errors.title = '콘텐츠 제목을 입력해 주세요.'
-  }
-
-  if (!values.content.trim()) {
+  const contentLength = values.content.trim().length
+  if (contentLength === 0) {
     errors.content = '학습할 기술 콘텐츠를 입력해 주세요.'
+  } else if (contentLength < 300) {
+    errors.content = '최소 300자 이상 입력해 주세요.'
+  } else if (contentLength > 15000) {
+    errors.content = '최대 15,000자까지 입력 가능합니다.'
   }
 
   return errors

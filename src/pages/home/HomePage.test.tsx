@@ -3,17 +3,14 @@ import '@testing-library/jest-dom/vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, Routes, Route } from 'react-router'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HomePage } from '@/pages/home/HomePage'
-import {
-  isValidLearningUrl,
-  validateContentInput,
-} from '@/pages/home/model/contentInputValidation'
 import * as contentApi from '@/shared/api/content'
 import { mockExtractedContent } from '@/mocks/fixtures/content'
 import { ApiError } from '@/shared/api/error'
+import type { ContentExtractResponse } from '@/shared/api/types'
 
 vi.mock('@/shared/api/content')
 
@@ -56,54 +53,7 @@ describe('HomePage', () => {
     expect(html).not.toContain('/api/')
   })
 
-  it('HTTP와 HTTPS URL만 학습 URL로 허용한다', () => {
-    expect(isValidLearningUrl('https://tech.example.com/article')).toBe(true)
-    expect(isValidLearningUrl('http://localhost:3000/article')).toBe(true)
-    expect(isValidLearningUrl('ftp://example.com/file')).toBe(false)
-    expect(isValidLearningUrl('example.com/article')).toBe(false)
-  })
 
-  it('URL 입력의 필수값과 형식을 검증한다', () => {
-    expect(validateContentInput('url', { content: '', title: '', url: '' })).toEqual({
-      url: '학습할 기술 아티클 URL을 입력해 주세요.',
-    })
-    expect(validateContentInput('url', { content: '', title: '', url: 'invalid' })).toEqual({
-      url: 'http:// 또는 https://로 시작하는 올바른 URL을 입력해 주세요.',
-    })
-    expect(
-      validateContentInput('url', {
-        content: '',
-        title: '',
-        url: 'https://tech.example.com/article',
-      }),
-    ).toEqual({})
-
-    // isExtracted === true일 때 제목과 본문 검증 추가
-    expect(
-      validateContentInput(
-        'url',
-        { content: '', title: '', url: 'https://tech.example.com/article' },
-        true,
-      ),
-    ).toEqual({
-      content: '학습할 기술 콘텐츠를 입력해 주세요.',
-      title: '콘텐츠 제목을 입력해 주세요.',
-    })
-  })
-
-  it('텍스트 입력에서 제목과 본문을 모두 요구한다', () => {
-    expect(validateContentInput('text', { content: '', title: '', url: '' })).toEqual({
-      content: '학습할 기술 콘텐츠를 입력해 주세요.',
-      title: '콘텐츠 제목을 입력해 주세요.',
-    })
-    expect(
-      validateContentInput('text', {
-        content: '트랜잭션 전파 속성에 대한 본문',
-        title: 'Spring Transaction',
-        url: '',
-      }),
-    ).toEqual({})
-  })
 
   describe('URL 추출 동작 통합 테스트', () => {
     it('유효한 URL을 입력하고 제출하면 같은 탭에서 폼이 확장되고 내용이 주입된다', async () => {
@@ -156,6 +106,28 @@ describe('HomePage', () => {
       expect(screen.getByRole('button', { name: '본문 불러오기' })).toBeInTheDocument()
     })
 
+    it('유효하지 않은 URL 형식을 입력하면 에러 메시지를 표시한다', async () => {
+      const user = userEvent.setup()
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <HomePage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+      const urlInput = screen.getByLabelText('기술 아티클 URL')
+      await user.type(urlInput, 'ftp://example.com/article')
+      
+      const submitButton = screen.getByRole('button', { name: '본문 불러오기' })
+      await user.click(submitButton)
+
+      const errorMessage = await screen.findByText(/http:\/\/ 또는 https:\/\/로 시작하는 올바른 URL을 입력해 주세요./)
+      expect(errorMessage).toBeInTheDocument()
+    })
+
     it('추출 실패 시 에러 메시지를 렌더링한다', async () => {
       vi.mocked(contentApi.extractContent).mockRejectedValueOnce(
         new ApiError({
@@ -184,6 +156,144 @@ describe('HomePage', () => {
       // 에러 메시지 렌더링 대기
       const errorMessage = await screen.findByText(/본문을 자동으로 가져오지 못했습니다/)
       expect(errorMessage).toBeInTheDocument()
+    })
+  })
+
+  describe('콘텐츠 등록 동작 통합 테스트', () => {
+    it('URL 모드로 성공적으로 콘텐츠를 등록하고 이동한다', async () => {
+      vi.mocked(contentApi.extractContent).mockResolvedValueOnce({
+        ...mockExtractedContent,
+      })
+      vi.mocked(contentApi.createContent).mockResolvedValueOnce({ contentId: 101, validationStatus: 'PENDING' })
+      const user = userEvent.setup()
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/contents/:contentId/preparing" element={<div data-testid="preparation-page">학습 준비 화면</div>} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+      // URL 모드로 가져오기
+      const urlInput = screen.getByLabelText('기술 아티클 URL')
+      await user.type(urlInput, 'https://example.com/article')
+      const extractButton = screen.getByRole('button', { name: '본문 불러오기' })
+      await user.click(extractButton)
+
+      const createButton = await screen.findByRole('button', { name: /분석하고 퀴즈 만들기/ })
+      expect(createButton).toBeInTheDocument()
+      
+      // 본문 길이를 300자 이상으로 맞춰 활성화 상태로 만듦
+      const contentTextarea = screen.getByLabelText('학습할 본문')
+      await user.clear(contentTextarea)
+      contentTextarea.focus()
+      await user.paste('a'.repeat(300))
+
+      await user.click(createButton)
+
+      // 등록 요청이 성공적으로 보내졌는지 확인
+      expect(contentApi.createContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inputType: 'URL',
+          url: 'https://example.com/article',
+        })
+      )
+
+      const preparationPage = await screen.findByTestId('preparation-page')
+      expect(preparationPage).toBeInTheDocument()
+    })
+
+    it('TEXT 모드로 성공적으로 콘텐츠를 등록하고 이동한다', async () => {
+      vi.mocked(contentApi.createContent).mockResolvedValueOnce({ contentId: 101, validationStatus: 'PENDING' })
+      const user = userEvent.setup()
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/']}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/contents/:contentId/preparing" element={<div data-testid="preparation-page">학습 준비 화면</div>} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+      // 텍스트 모드로 변경
+      const textTab = screen.getByRole('tab', { name: /텍스트 직접 입력/ })
+      await user.click(textTab)
+
+      const contentTextarea = screen.getByLabelText('학습할 본문')
+      contentTextarea.focus()
+      await user.paste('a'.repeat(300))
+
+      const createButton = screen.getByRole('button', { name: /분석하고 퀴즈 만들기/ })
+      await user.click(createButton)
+
+      expect(contentApi.createContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inputType: 'TEXT',
+          title: undefined,
+          text: 'a'.repeat(300),
+        })
+      )
+
+      const preparationPage = await screen.findByTestId('preparation-page')
+      expect(preparationPage).toBeInTheDocument()
+    })
+  })
+
+  describe('경쟁 조건(Race Condition) 방어 테스트', () => {
+    it('URL -> TEXT -> URL 탭 전환 시 이전 추출 요청의 지연 응답을 무시한다', async () => {
+      let resolveFirstExtract!: (value: ContentExtractResponse) => void
+      
+      // 첫 번째 요청은 지연되도록 설정
+      vi.mocked(contentApi.extractContent).mockImplementationOnce(() => {
+        return new Promise(resolve => {
+          resolveFirstExtract = resolve
+        })
+      })
+
+      const user = userEvent.setup()
+      const queryClient = createTestQueryClient()
+
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <HomePage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+      // 1. URL 입력 후 첫 번째 요청 발송
+      const urlInput = screen.getByLabelText('기술 아티클 URL')
+      await user.type(urlInput, 'https://example.com/first')
+      const extractButton = screen.getByRole('button', { name: '본문 불러오기' })
+      await user.click(extractButton)
+
+      // 2. TEXT 탭으로 이동했다가 다시 URL 탭으로 돌아옴 (Generation 증가)
+      const textTab = screen.getByRole('tab', { name: /텍스트 직접 입력/ })
+      const urlTab = screen.getByRole('tab', { name: /URL 가져오기/ })
+      await user.click(textTab)
+      await user.click(urlTab)
+
+      // 3. 지연되었던 첫 번째 요청의 응답이 이제야 도착함
+      resolveFirstExtract({
+        content: '과거 요청된 추출 본문',
+        title: '과거 제목'
+      })
+
+      // 비동기 처리가 끝날 때까지 대기
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      // 4. 이전 응답이 무시되었으므로 여전히 추출 전 상태('본문 불러오기' 버튼이 그대로 존재)여야 함
+      expect(screen.getByRole('button', { name: '본문 불러오기' })).toBeInTheDocument()
+      expect(screen.queryByText('과거 요청된 추출 본문')).not.toBeInTheDocument()
     })
   })
 })

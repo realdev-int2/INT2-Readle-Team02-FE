@@ -21,6 +21,12 @@ interface GradingFlowProps {
   attemptId: number
 }
 
+function isValidSubmitRequest(data: unknown): data is QuizSubmitRequest {
+  if (!data || typeof data !== 'object') return false
+  const req = data as Record<string, unknown>
+  return Array.isArray(req.answers)
+}
+
 export function GradingPage() {
   const { attemptId = '' } = useParams<{ attemptId: string }>()
   const parsedAttemptId = Number(attemptId)
@@ -51,14 +57,17 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
   const [reportId, setReportId] = useState<number>()
   
   const [submitRequest] = useState<QuizSubmitRequest | undefined>(() => {
-    if (location.state?.submitRequest) {
-      return location.state.submitRequest as QuizSubmitRequest
+    if (isValidSubmitRequest(location.state?.submitRequest)) {
+      return location.state.submitRequest
     }
     try {
       if (typeof window !== 'undefined' && window.sessionStorage) {
         const stored = window.sessionStorage.getItem(`quiz_submit_${attemptId}`)
         if (stored) {
-          return JSON.parse(stored) as QuizSubmitRequest
+          const parsed = JSON.parse(stored)
+          if (isValidSubmitRequest(parsed)) {
+            return parsed
+          }
         }
       }
     } catch {
@@ -162,13 +171,20 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
 
     return () => {
       isMounted = false
+      submitFired.current.delete(key)
       timers.forEach((timer) => window.clearTimeout(timer))
     }
   }, [attemptId, attemptNumber, submitRequest, navigate, shouldFailFirstAttempt])
 
   useEffect(() => {
-    if (status === 'success' && typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem(`quiz_submit_${attemptId}`)
+    if (status === 'success') {
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          window.sessionStorage.removeItem(`quiz_submit_${attemptId}`)
+        }
+      } catch {
+        // ignore
+      }
     }
   }, [status, attemptId])
 

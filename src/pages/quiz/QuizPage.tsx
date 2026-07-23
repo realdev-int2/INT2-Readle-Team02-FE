@@ -298,9 +298,13 @@ export function QuizPage() {
 
     const submitRequest = formatAnswersForSubmit(detail.questions, answers)
     
-    // 채점 중 새로고침 대비를 위해 sessionStorage에 저장
+    // 채점 중 새로고침 대비를 위해 sessionStorage에 저장 (실패 시 무시)
     if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem(`quiz_submit_${attemptId}`, JSON.stringify(submitRequest))
+      try {
+        sessionStorage.setItem(`quiz_submit_${attemptId}`, JSON.stringify(submitRequest))
+      } catch {
+        // Storage is full or browser privacy mode blocks access
+      }
     }
     
     // GradingPage로 즉시 이동하며 퀴즈 제출 요청 데이터를 라우터 state로 전달

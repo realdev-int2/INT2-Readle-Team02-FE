@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, generatePath, useNavigate, useParams } from 'react-router'
 import { useCreateQuiz } from '@/pages/learning-preparation/api/useCreateQuiz'
+import { useRetryValidation } from '@/pages/learning-preparation/api/useRetryValidation'
 import { useValidationPolling } from '@/pages/learning-preparation/api/useValidationPolling'
 import { ROUTES } from '@/shared/config/routes'
 import { Button } from '@/shared/ui/Button'
@@ -46,6 +47,7 @@ export function LearningPreparationPage() {
   const validationStatus = validationResponse?.status
 
   const createQuizMutation = useCreateQuiz()
+  const retryValidationMutation = useRetryValidation(contentId)
 
   // API 상태에 따라 렌더링 시점에 바로 activeStage 도출 (You might not need an effect)
   let activeStage = 1 // 1: VALIDATE(시작/진행 중)
@@ -250,7 +252,8 @@ export function LearningPreparationPage() {
                 <div className="mt-6 w-full max-w-[200px]">
                   <Button
                     fullWidth
-                    onClick={() => void retryValidation()}
+                    loading={retryValidationMutation.isPending}
+                    onClick={() => retryValidationMutation.mutate()}
                     variant="primary"
                   >
                     다시 시도

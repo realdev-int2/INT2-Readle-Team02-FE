@@ -1,29 +1,15 @@
 import type { CSSProperties } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import {
   formatCompletedAt,
   formatDuration,
-  mockResultReport,
   type QuestionResult,
 } from '@/pages/result-report/model/resultReport'
 import { questionTypeLabel } from '@/pages/quiz/model/quiz'
 import { ROUTES } from '@/shared/config/routes'
 import { ErrorMessage, Loading } from '@/shared/ui'
+import { useResultReportDetail } from '@/pages/result-report/api/useResultReportDetail'
 import '@/pages/result-report/ResultReportPage.css'
-
-type ReportMockState = 'ready' | 'loading' | 'not-ready' | 'not-found' | 'forbidden'
-
-function parseReportMockState(value: string | null): ReportMockState {
-  switch (value) {
-    case 'loading':
-    case 'not-ready':
-    case 'not-found':
-    case 'forbidden':
-      return value
-    default:
-      return 'ready'
-  }
-}
 
 function QuestionResultItem({ result }: { result: QuestionResult }) {
   return (
@@ -32,7 +18,7 @@ function QuestionResultItem({ result }: { result: QuestionResult }) {
         <span aria-hidden="true" className="result-question-status">{result.isCorrect ? '✓' : '!'}</span>
         <span className="result-question-summary">
           <span className="result-question-meta">
-            QUESTION {String(result.orderNo).padStart(2, '0')} · {questionTypeLabel[result.type]}
+            QUESTION {String(result.orderNo).padStart(2, '0')} · {questionTypeLabel[result.questionType as keyof typeof questionTypeLabel] ?? result.questionType}
           </span>
           <strong>{result.questionText}</strong>
         </span>
@@ -43,9 +29,9 @@ function QuestionResultItem({ result }: { result: QuestionResult }) {
       <div className="result-question-detail">
         <section aria-labelledby={`answer-title-${result.questionId}`} className="result-answer-panel">
           <h3 id={`answer-title-${result.questionId}`}>내가 제출한 답안</h3>
-          {result.type === 'code_blank'
-            ? <code>{result.userAnswer}</code>
-            : <p>{result.userAnswer}</p>}
+          {result.questionType === 'code_blank'
+            ? <code>{result.submittedAnswer}</code>
+            : <p>{result.submittedAnswer}</p>}
         </section>
 
         {!result.isCorrect && result.aiFeedback && (
@@ -72,7 +58,7 @@ function ReportLoadingState() {
   )
 }
 
-function ReportErrorState({ state }: { state: Exclude<ReportMockState, 'ready' | 'loading'> }) {
+function ReportErrorState({ state }: { state: 'not-ready' | 'not-found' | 'forbidden' | 'unknown-error' }) {
   const content = {
     'not-ready': {
       code: 'REPORT_NOT_READY',
@@ -89,6 +75,11 @@ function ReportErrorState({ state }: { state: Exclude<ReportMockState, 'ready' |
       title: '결과 리포트에 접근할 수 없습니다',
       description: '본인의 학습 결과만 확인할 수 있습니다.',
     },
+    'unknown-error': {
+      code: 'UNKNOWN_ERROR',
+      title: '일시적인 오류가 발생했습니다',
+      description: '네트워크 상태가 불안정하거나 서버에 문제가 발생했습니다.',
+    },
   }[state]
 
   return (
@@ -102,13 +93,19 @@ function ReportErrorState({ state }: { state: Exclude<ReportMockState, 'ready' |
 }
 
 export function ResultReportPage() {
-  const [searchParams] = useSearchParams()
-  const mockState = parseReportMockState(searchParams.get('mock'))
+  const { reportId = '' } = useParams<{ reportId: string }>()
+  const { data: report, isLoading, error } = useResultReportDetail(reportId)
 
-  if (mockState === 'loading') return <ReportLoadingState />
-  if (mockState !== 'ready') return <ReportErrorState state={mockState} />
-
-  const report = mockResultReport
+  if (isLoading) return <ReportLoadingState />
+  
+  if (error || !report) {
+    let state: 'not-ready' | 'not-found' | 'forbidden' | 'unknown-error' = 'unknown-error'
+    if (error?.status === 404) state = 'not-found'
+    else if (error?.status === 403) state = 'forbidden'
+    else if (!error && !report) state = 'not-ready'
+    
+    return <ReportErrorState state={state} />
+  }
   const incorrectCount = report.totalCount - report.correctCount
   const scoreStyle = { '--result-score': `${report.accuracyRate * 3.6}deg` } as CSSProperties
 
@@ -120,7 +117,7 @@ export function ResultReportPage() {
           <h1>{report.title}</h1>
           <p>잘 이해한 개념과 다시 살펴볼 부분을 확인해 보세요.</p>
           <div aria-label="퀴즈 태그" className="result-tags">
-            {report.tags.map((tag) => <span key={tag.tagId}>#{tag.name}</span>)}
+            {report.tags.map((tag) => <span key={tag}>#{tag}</span>)}
           </div>
         </div>
 
@@ -140,7 +137,7 @@ export function ResultReportPage() {
         </article>
         <article>
           <span>풀이 시간</span>
-          <strong>{formatDuration(report.durationSeconds)}</strong>
+          <strong>{formatDuration(report.solveDurationSeconds)}</strong>
         </article>
         <article>
           <span>완료 시각</span>
@@ -158,7 +155,7 @@ export function ResultReportPage() {
         </div>
 
         <div className="result-question-list">
-          {report.questionResults.map((result) => (
+          {report.results.map((result) => (
             <QuestionResultItem key={result.questionId} result={result} />
           ))}
         </div>

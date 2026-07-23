@@ -291,10 +291,10 @@ export function LearningPreparationPage() {
                 dangerAction={
                   bypassAvailable
                     ? {
-                        text: '무시하고 퀴즈 만들기',
-                        onClick: handleBypass,
-                        loading: createQuizMutation.isPending,
-                      }
+                      text: '무시하고 퀴즈 만들기',
+                      onClick: handleBypass,
+                      loading: createQuizMutation.isPending,
+                    }
                     : undefined
                 }
               />

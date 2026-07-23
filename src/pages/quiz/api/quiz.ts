@@ -53,3 +53,14 @@ export function submitQuizAttempt(attemptId: number, request: QuizSubmitRequest)
     requiresAuth: true,
   })
 }
+
+/**
+ * 퀴즈 풀이 결과 조회 — 이미 제출된 채점 결과를 가져옵니다 (새로고침 복구용).
+ * GET /api/quizzes/attempts/{attemptId}/result
+ */
+export function fetchQuizAttemptResult(attemptId: number) {
+  return apiRequest<QuizSubmitResponse>(`/quizzes/attempts/${attemptId}/result`, {
+    requiresAuth: true,
+  })
+}
+

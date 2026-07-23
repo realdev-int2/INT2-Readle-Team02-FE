@@ -42,9 +42,9 @@ function createApiUrl(path: string) {
   return `${API_PREFIX}${path}`
 }
 
-function createRequestBody(body: unknown) {
+function createRequestBody(body: unknown): BodyInit | undefined {
   if (body === undefined || body instanceof FormData) {
-    return body
+    return body as BodyInit | undefined
   }
 
   return JSON.stringify(body)

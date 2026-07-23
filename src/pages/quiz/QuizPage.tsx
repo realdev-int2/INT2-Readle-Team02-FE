@@ -3,7 +3,6 @@ import { generatePath, useNavigate, useParams } from 'react-router'
 import {
   fetchQuizAttemptDetail,
   startQuizAttempt,
-  submitQuizAttempt,
 } from '@/pages/quiz/api/quiz'
 import { formatAnswersForSubmit } from '@/pages/quiz/api/types'
 import type { QuizDetailResponse } from '@/pages/quiz/api/types'
@@ -291,24 +290,28 @@ export function QuizPage() {
   }
 
   async function confirmSubmit() {
-    // 이미 제출 중이면 중복 요청 차단
+    // 중복 요청 차단
     if (phase.status === 'submitting') return
-    const submitQuizId = quizId
     setShowConfirmation(false)
     setPhase({ status: 'submitting', attemptId, detail })
     setShowSubmitError(false)
 
+    const submitRequest = formatAnswersForSubmit(detail.questions, answers)
+    
+    // 채점 중 새로고침 대비를 위해 sessionStorage에 저장 (실패 시 무시)
     try {
-      const submitRequest = formatAnswersForSubmit(detail.questions, answers)
-      const result = await submitQuizAttempt(attemptId, submitRequest)
-      if (submitQuizId !== quizId) return
-      void navigate(generatePath(ROUTES.grading, { reportId: String(result.reportId) }))
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.setItem(`quiz_submit_${attemptId}`, JSON.stringify(submitRequest))
+      }
     } catch {
-      if (submitQuizId !== quizId) return
-      setShowSubmitError(true)
-      // 제출 실패 시 ready 상태로 복귀해 사용자가 다시 제출할 수 있도록 함
-      setPhase({ status: 'ready', attemptId, detail })
+      // Storage is full or browser privacy mode blocks access
     }
+    
+    // GradingPage로 즉시 이동하며 퀴즈 제출 요청 데이터를 라우터 state로 전달
+    void navigate(generatePath(ROUTES.grading, { attemptId: String(attemptId) }), {
+      state: { submitRequest },
+      replace: true // 퀴즈 페이지를 히스토리에서 대체
+    })
   }
 
   return (

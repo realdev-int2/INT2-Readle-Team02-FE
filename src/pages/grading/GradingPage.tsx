@@ -1,9 +1,10 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, useRef, type CSSProperties } from 'react'
 import { generatePath, Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router'
 import { ROUTES } from '@/shared/config/routes'
 import { Button } from '@/shared/ui'
 import { submitQuizAttempt, fetchQuizAttemptResult } from '@/pages/quiz/api/quiz'
 import type { QuizSubmitRequest } from '@/pages/quiz/api/types'
+import { ApiError } from '@/shared/api/error'
 import '@/pages/grading/GradingPage.css'
 
 type GradingStatus = 'running' | 'success' | 'error'
@@ -49,25 +50,38 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
 
   const [reportId, setReportId] = useState<number>()
   
-  let submitRequest = location.state?.submitRequest as QuizSubmitRequest | undefined
-  if (!submitRequest && typeof sessionStorage !== 'undefined') {
-    const stored = sessionStorage.getItem(`quiz_submit_${attemptId}`)
-    if (stored) {
-      try {
-        submitRequest = JSON.parse(stored) as QuizSubmitRequest
-      } catch {
-        // ignore parse error
+  const [submitRequest] = useState<QuizSubmitRequest | undefined>(() => {
+    if (location.state?.submitRequest) {
+      return location.state.submitRequest as QuizSubmitRequest
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      const stored = sessionStorage.getItem(`quiz_submit_${attemptId}`)
+      if (stored) {
+        try {
+          return JSON.parse(stored) as QuizSubmitRequest
+        } catch {
+          // ignore parse error
+        }
       }
     }
-  }
+    return undefined
+  })
 
   const shouldFailFirstAttempt =
     import.meta.env.DEV && searchParams.get('mock') === 'failed'
   const progress = status === 'success' ? 100 : Math.round(((activeStage + 1) / gradingSteps.length) * 100)
   const resultPath = reportId ? generatePath(ROUTES.resultReport, { reportId: String(reportId) }) : ''
 
+  const submitFired = useRef(new Set<string>())
+
   useEffect(() => {
     let isMounted = true
+    
+    const key = `${attemptId}-${attemptNumber}`
+    // StrictMode 등에서 중복 실행되는 것을 방지
+    if (submitFired.current.has(key)) return
+    submitFired.current.add(key)
+    
     const timers: number[] = []
     const willFail = shouldFailFirstAttempt && attemptNumber === 0
 
@@ -108,28 +122,28 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
       } catch (error: unknown) {
         if (!isMounted) return
         
-        const apiError = error as { response?: { status?: number }, code?: string }
-        // 중복 제출 에러(이미 처리됨) 시 결과 다시 조회 시도
-        if (submitRequest && (apiError.response?.status === 409 || apiError.code === 'ATTEMPT_ALREADY_SUBMITTED')) {
-          try {
-            const fallbackResult = await fetchQuizAttemptResult(attemptId)
-            if (!isMounted) return
-            setReportId(fallbackResult.reportId)
-            setActiveStage(gradingSteps.length - 1)
-            setStatus('success')
-            return
-          } catch {
-            if (!isMounted) return
-            setStatus('error')
+        if (error instanceof ApiError) {
+          // 중복 제출 에러(이미 처리됨) 시 결과 다시 조회 시도
+          if (submitRequest && (error.status === 409 || error.code === 'ATTEMPT_ALREADY_SUBMITTED')) {
+            try {
+              const fallbackResult = await fetchQuizAttemptResult(attemptId)
+              if (!isMounted) return
+              setReportId(fallbackResult.reportId)
+              setActiveStage(gradingSteps.length - 1)
+              setStatus('success')
+              return
+            } catch {
+              if (!isMounted) return
+              setStatus('error')
+              return
+            }
+          }
+          
+          // 데이터가 없거나 권한이 없는 등 영구적 오류 접근 시 홈으로 리다이렉트
+          if (!submitRequest && (error.status === 404 || error.status === 403 || error.status === 401)) {
+            navigate(ROUTES.home, { replace: true })
             return
           }
-        }
-        
-        // 데이터가 없거나 권한이 없는 등 영구적 오류 접근 시 홈으로 리다이렉트
-        const errorStatus = apiError.response?.status
-        if (!submitRequest && (errorStatus === 404 || errorStatus === 403 || errorStatus === 401)) {
-          navigate(ROUTES.home, { replace: true })
-          return
         }
         
         setStatus('error')

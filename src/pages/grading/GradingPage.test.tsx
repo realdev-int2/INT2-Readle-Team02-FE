@@ -68,4 +68,41 @@ describe('GradingPage', () => {
       '/result-reports/701',
     )
   })
+
+  it('새로고침 시 sessionStorage에서 답안을 한 번만 복구하고 중복 제출을 방지한다', async () => {
+    vi.useFakeTimers()
+    vi.mocked(submitQuizAttempt).mockClear()
+    const sessionStorageSpy = vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(JSON.stringify({ answers: [] }))
+    
+    vi.mocked(submitQuizAttempt).mockResolvedValueOnce({
+      reportId: 701,
+      attemptId: 99,
+      gradingStatus: 'completed',
+      accuracyRate: 100,
+      correctCount: 2,
+      totalCount: 2,
+      solveDurationSeconds: 120,
+      completedAt: new Date().toISOString(),
+      results: []
+    })
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/quizzes/attempts/99/grading' }]}>
+        <Routes>
+          <Route path="/quizzes/attempts/:attemptId/grading" element={<GradingPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await act(async () => {
+      vi.advanceTimersByTime(10000)
+    })
+
+    // lazy state initialization 덕분에 getItem은 최초 1회만 호출됨
+    expect(sessionStorageSpy).toHaveBeenCalledTimes(1)
+    // 제출 로직 역시 Effect가 한 번만 실행되므로 1회만 호출됨
+    expect(submitQuizAttempt).toHaveBeenCalledTimes(1)
+    
+    sessionStorageSpy.mockRestore()
+  })
 })

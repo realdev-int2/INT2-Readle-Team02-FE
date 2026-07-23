@@ -96,10 +96,17 @@ export function formatDuration(totalSeconds: number) {
   return `${minutes}분 ${String(seconds).padStart(2, '0')}초`
 }
 
+const ISO_OFFSET_PATTERN = /(Z|[+-]\d{2}:?\d{2})$/i
+
+function parseResultReportTimestamp(value: string) {
+  const timestamp = ISO_OFFSET_PATTERN.test(value) ? value : `${value}+09:00`
+  return new Date(timestamp)
+}
+
 export function formatCompletedAt(value: string) {
   return new Intl.DateTimeFormat('ko-KR', {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Asia/Seoul',
-  }).format(new Date(value))
+  }).format(parseResultReportTimestamp(value))
 }

@@ -31,7 +31,8 @@ function GradingFlow({ reportId }: GradingFlowProps) {
   const [attemptNumber, setAttemptNumber] = useState(0)
   const [status, setStatus] = useState<GradingStatus>('running')
 
-  const shouldFailFirstAttempt = searchParams.get('mock') === 'failed'
+  const shouldFailFirstAttempt =
+    import.meta.env.DEV && searchParams.get('mock') === 'failed'
   const progress = status === 'success' ? 100 : Math.round(((activeStage + 1) / gradingSteps.length) * 100)
   const resultPath = generatePath(ROUTES.resultReport, { reportId })
 

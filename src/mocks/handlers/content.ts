@@ -126,4 +126,19 @@ export const contentHandlers = [
       mockValidationResponses[scenario]
     )
   }),
+
+  http.post('*/api/contents/:contentId/validation/retry', ({ params }) => {
+    const contentId = String(params.contentId)
+
+    if (contentId !== String(MOCK_CONTENT_ID)) {
+      return HttpResponse.json(
+        createErrorResponse('CONTENT_NOT_FOUND', '콘텐츠를 찾을 수 없습니다.'),
+        { status: 404 },
+      )
+    }
+
+    validationPollCounts.set(contentId, 0)
+
+    return HttpResponse.json(mockValidationResponses['PENDING'])
+  }),
 ]

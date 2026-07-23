@@ -63,7 +63,8 @@
 
 .learn-composer-textarea {
   min-height: 10rem;
-  resize: none;
+  max-height: 30rem;
+  resize: vertical;
   padding-top: 1rem;
   font-size: var(--text-body);
   line-height: 1.6;

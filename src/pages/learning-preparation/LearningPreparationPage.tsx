@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, generatePath, useNavigate, useParams } from 'react-router'
 import { useCreateQuiz } from '@/pages/learning-preparation/api/useCreateQuiz'
+import { useRetryValidation } from '@/pages/learning-preparation/api/useRetryValidation'
 import { useValidationPolling } from '@/pages/learning-preparation/api/useValidationPolling'
 import { ROUTES } from '@/shared/config/routes'
 import { Button } from '@/shared/ui/Button'
@@ -34,6 +35,55 @@ function KnowledgeGraph({ complete }: { complete: boolean }) {
   )
 }
 
+function ErrorFeedbackPanel({
+  message,
+  primaryAction,
+  dangerAction,
+}: {
+  message: string
+  primaryAction?: {
+    text: string
+    onClick: () => void
+    loading?: boolean
+  }
+  dangerAction?: {
+    text: string
+    onClick: () => void
+    loading?: boolean
+  }
+}) {
+  return (
+    <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
+      <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
+      <p className="mt-4 text-label font-medium text-text-primary">{message}</p>
+      {primaryAction && (
+        <div className="mt-6 w-full max-w-[200px]">
+          <Button
+            fullWidth
+            loading={primaryAction.loading}
+            onClick={primaryAction.onClick}
+            variant="primary"
+          >
+            {primaryAction.text}
+          </Button>
+        </div>
+      )}
+      {dangerAction && (
+        <div className="mt-6 w-full max-w-[200px]">
+          <Button
+            fullWidth
+            loading={dangerAction.loading}
+            onClick={dangerAction.onClick}
+            variant="danger"
+          >
+            {dangerAction.text}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function LearningPreparationPage() {
   const navigate = useNavigate()
   const { contentId: contentIdParam } = useParams<{ contentId: string }>()
@@ -46,6 +96,7 @@ export function LearningPreparationPage() {
   const validationStatus = validationResponse?.status
 
   const createQuizMutation = useCreateQuiz()
+  const retryValidationMutation = useRetryValidation(contentId)
 
   // API 상태에 따라 렌더링 시점에 바로 activeStage 도출 (You might not need an effect)
   let activeStage = 1 // 1: VALIDATE(시작/진행 중)
@@ -209,73 +260,44 @@ export function LearningPreparationPage() {
               <span>{hasPipelineError ? 'FAILED' : 'LIVE'}</span>
             </div>
             {isQuizCreateError ? (
-              <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
-                <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
-                <p className="mt-4 text-label font-medium text-text-primary">
-                  퀴즈 생성 중 오류가 발생했습니다.
-                </p>
-                <div className="mt-6 w-full max-w-[200px]">
-                  <Button
-                    fullWidth
-                    loading={createQuizMutation.isPending}
-                    onClick={handleRetryQuiz}
-                    variant="primary"
-                  >
-                    퀴즈 생성 재시도
-                  </Button>
-                </div>
-              </div>
+              <ErrorFeedbackPanel
+                message="퀴즈 생성 중 오류가 발생했습니다."
+                primaryAction={{
+                  text: '퀴즈 생성 재시도',
+                  onClick: handleRetryQuiz,
+                  loading: createQuizMutation.isPending,
+                }}
+              />
             ) : isValidationError ? (
-              <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
-                <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
-                <p className="mt-4 text-label font-medium text-text-primary">
-                  검증 상태를 가져오지 못했습니다.
-                </p>
-                <div className="mt-6 w-full max-w-[200px]">
-                  <Button
-                    fullWidth
-                    onClick={() => void retryValidation()}
-                    variant="primary"
-                  >
-                    다시 시도
-                  </Button>
-                </div>
-              </div>
+              <ErrorFeedbackPanel
+                message="검증 상태를 가져오지 못했습니다."
+                primaryAction={{
+                  text: '다시 시도',
+                  onClick: () => void retryValidation(),
+                }}
+              />
             ) : isFailed ? (
-              <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
-                <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
-                <p className="mt-4 text-label font-medium text-text-primary">
-                  {errorMessage}
-                </p>
-                <div className="mt-6 w-full max-w-[200px]">
-                  <Button
-                    fullWidth
-                    onClick={() => void retryValidation()}
-                    variant="primary"
-                  >
-                    다시 시도
-                  </Button>
-                </div>
-              </div>
+              <ErrorFeedbackPanel
+                message={errorMessage}
+                primaryAction={{
+                  text: '다시 시도',
+                  onClick: () => retryValidationMutation.mutate(),
+                  loading: retryValidationMutation.isPending,
+                }}
+              />
             ) : isRejected ? (
-              <div className="flex h-[17.5rem] flex-col items-center justify-center rounded-xl bg-surface-panel p-6 text-center shadow-[inset_0_0_0_1px_var(--color-border-default)]">
-                <span className="text-4xl text-status-error" aria-hidden="true">⚠</span>
-                <p className="mt-4 text-label font-medium text-text-primary">
-                  {errorMessage}
-                </p>
-                {bypassAvailable && (
-                  <div className="mt-6 w-full max-w-[200px]">
-                    <Button
-                      fullWidth
-                      loading={createQuizMutation.isPending}
-                      onClick={handleBypass}
-                      variant="danger"
-                    >
-                      무시하고 퀴즈 만들기
-                    </Button>
-                  </div>
-                )}
-              </div>
+              <ErrorFeedbackPanel
+                message={errorMessage}
+                dangerAction={
+                  bypassAvailable
+                    ? {
+                        text: '무시하고 퀴즈 만들기',
+                        onClick: handleBypass,
+                        loading: createQuizMutation.isPending,
+                      }
+                    : undefined
+                }
+              />
             ) : (
               <>
                 <KnowledgeGraph complete={complete} />

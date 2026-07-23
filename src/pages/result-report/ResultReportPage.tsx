@@ -32,7 +32,7 @@ function QuestionResultItem({ result }: { result: QuestionResult }) {
         <span aria-hidden="true" className="result-question-status">{result.isCorrect ? '✓' : '!'}</span>
         <span className="result-question-summary">
           <span className="result-question-meta">
-            QUESTION {String(result.orderNo).padStart(2, '0')} · {questionTypeLabel[result.type]}
+            QUESTION {String(result.orderNo).padStart(2, '0')} · {questionTypeLabel[result.questionType as keyof typeof questionTypeLabel] ?? result.questionType}
           </span>
           <strong>{result.questionText}</strong>
         </span>
@@ -43,9 +43,9 @@ function QuestionResultItem({ result }: { result: QuestionResult }) {
       <div className="result-question-detail">
         <section aria-labelledby={`answer-title-${result.questionId}`} className="result-answer-panel">
           <h3 id={`answer-title-${result.questionId}`}>내가 제출한 답안</h3>
-          {result.type === 'code_blank'
-            ? <code>{result.userAnswer}</code>
-            : <p>{result.userAnswer}</p>}
+          {result.questionType === 'code_blank'
+            ? <code>{result.submittedAnswer}</code>
+            : <p>{result.submittedAnswer}</p>}
         </section>
 
         {!result.isCorrect && result.aiFeedback && (
@@ -120,7 +120,7 @@ export function ResultReportPage() {
           <h1>{report.title}</h1>
           <p>잘 이해한 개념과 다시 살펴볼 부분을 확인해 보세요.</p>
           <div aria-label="퀴즈 태그" className="result-tags">
-            {report.tags.map((tag) => <span key={tag.tagId}>#{tag.name}</span>)}
+            {report.tags.map((tag) => <span key={tag}>#{tag}</span>)}
           </div>
         </div>
 
@@ -140,7 +140,7 @@ export function ResultReportPage() {
         </article>
         <article>
           <span>풀이 시간</span>
-          <strong>{formatDuration(report.durationSeconds)}</strong>
+          <strong>{formatDuration(report.solveDurationSeconds)}</strong>
         </article>
         <article>
           <span>완료 시각</span>
@@ -158,7 +158,7 @@ export function ResultReportPage() {
         </div>
 
         <div className="result-question-list">
-          {report.questionResults.map((result) => (
+          {report.results.map((result) => (
             <QuestionResultItem key={result.questionId} result={result} />
           ))}
         </div>

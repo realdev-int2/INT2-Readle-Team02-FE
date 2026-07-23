@@ -48,9 +48,9 @@ describe('ResultReportPage', () => {
 
 describe('result report model', () => {
   it('API 계약에 맞게 정답에는 피드백이 없고 오답에만 피드백이 있다', () => {
-    expect(mockResultReport.questionResults.filter((result) => result.isCorrect))
+    expect(mockResultReport.results.filter((result) => result.isCorrect))
       .toEqual(expect.arrayContaining([expect.objectContaining({ aiFeedback: null })]))
-    expect(mockResultReport.questionResults.filter((result) => !result.isCorrect).every((result) => Boolean(result.aiFeedback)))
+    expect(mockResultReport.results.filter((result) => !result.isCorrect).every((result) => Boolean(result.aiFeedback)))
       .toBe(true)
   })
 

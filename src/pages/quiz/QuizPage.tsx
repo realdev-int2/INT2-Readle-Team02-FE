@@ -302,7 +302,7 @@ export function QuizPage() {
       const submitRequest = formatAnswersForSubmit(detail.questions, answers)
       const result = await submitQuizAttempt(attemptId, submitRequest)
       if (submitQuizId !== quizId) return
-      void navigate(generatePath(ROUTES.grading, { attemptId: String(result.attemptId) }))
+      void navigate(generatePath(ROUTES.grading, { reportId: String(result.reportId) }))
     } catch {
       if (submitQuizId !== quizId) return
       setShowSubmitError(true)

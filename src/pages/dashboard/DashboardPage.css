@@ -424,10 +424,13 @@
   gap: 0.6rem;
 }
 
-.dashboard-tag-info strong {
+.dashboard-tag-info strong,
+.dashboard-tag-info a {
   overflow: hidden;
   color: var(--color-text-primary);
   font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

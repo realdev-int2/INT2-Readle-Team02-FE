@@ -3,6 +3,7 @@ import { AppLayout } from '@/app/layouts/AppLayout'
 import { DesignSystemPage } from '@/pages/design-system/DesignSystemPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { GradingPage } from '@/pages/grading/GradingPage'
+import { HistoryPage } from '@/pages/history/HistoryPage'
 import { HomePage } from '@/pages/home/HomePage'
 import { LandingPage } from '@/pages/landing/LandingPage'
 import { LearningPreparationPage } from '@/pages/learning-preparation/LearningPreparationPage'
@@ -54,16 +55,7 @@ export function AppRouter() {
             path={ROUTES.dashboard}
             element={<DashboardPage />}
           />
-          <Route
-            path={ROUTES.history}
-            element={
-              <RoutePlaceholderPage
-                description="완료한 퀴즈와 과거 학습 기록을 확인하는 화면이 들어갈 자리입니다."
-                eyebrow="History"
-                title="학습 히스토리"
-              />
-            }
-          />
+          <Route path={ROUTES.history} element={<HistoryPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

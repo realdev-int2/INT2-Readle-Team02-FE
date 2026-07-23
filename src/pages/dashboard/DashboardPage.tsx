@@ -220,7 +220,7 @@ function DashboardContent({ dashboard }: { dashboard: DashboardData }) {
                 <li key={tag.tagId}>
                   <span className="dashboard-tag-rank">{String(index + 1).padStart(2, '0')}</span>
                   <div className="dashboard-tag-info">
-                    <strong>#{tag.name}</strong>
+                    <Link to={`${ROUTES.history}?tagId=${tag.tagId}`}>#{tag.name}</Link>
                     <span>{tag.completedCount}회 학습</span>
                   </div>
                 </li>

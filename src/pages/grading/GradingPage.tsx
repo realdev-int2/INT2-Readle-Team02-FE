@@ -54,15 +54,15 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
     if (location.state?.submitRequest) {
       return location.state.submitRequest as QuizSubmitRequest
     }
-    if (typeof sessionStorage !== 'undefined') {
-      const stored = sessionStorage.getItem(`quiz_submit_${attemptId}`)
-      if (stored) {
-        try {
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const stored = window.sessionStorage.getItem(`quiz_submit_${attemptId}`)
+        if (stored) {
           return JSON.parse(stored) as QuizSubmitRequest
-        } catch {
-          // ignore parse error
         }
       }
+    } catch {
+      // ignore parse error or SecurityError
     }
     return undefined
   })

@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { QuizPage } from '@/pages/quiz/QuizPage'
-import { fetchQuizAttemptDetail, startQuizAttempt, submitQuizAttempt } from '@/pages/quiz/api/quiz'
+import { fetchQuizAttemptDetail, startQuizAttempt } from '@/pages/quiz/api/quiz'
 import {
   getAnsweredCount,
   getFirstUnansweredIndex,
@@ -20,7 +20,7 @@ function renderQuizPage(quizId = '1') {
     <MemoryRouter initialEntries={[`/quizzes/${quizId}`]}>
       <Routes>
         <Route path="/quizzes/:quizId" element={<QuizPage />} />
-        <Route path="/result-reports/:reportId/preparing" element={<p>채점 중...</p>} />
+        <Route path="/quizzes/attempts/:attemptId/grading" element={<p>채점 중...</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -84,20 +84,7 @@ describe('QuizPage', () => {
         }
       ]
     })
-    vi.mocked(submitQuizAttempt).mockResolvedValue({
-      reportId: 777,
-      attemptId: 99,
-      gradingStatus: 'completed',
-      accuracyRate: 100,
-      correctCount: 2,
-      totalCount: 2,
-      solveDurationSeconds: 120,
-      completedAt: new Date().toISOString(),
-      results: [
-        { questionId: 301, isCorrect: true, aiFeedback: null },
-        { questionId: 302, isCorrect: true, aiFeedback: null }
-      ]
-    })
+
 
     renderQuizPage()
 
@@ -117,9 +104,8 @@ describe('QuizPage', () => {
     const confirmButton = await screen.findByRole('button', { name: '제출하기' })
     await user.click(confirmButton)
 
-    // 리포트 777에 해당하는 채점 화면(preparing)으로 이동했는지 검증
+    // attemptId 99에 해당하는 채점 화면(grading)으로 이동했는지 검증
     expect(await screen.findByText('채점 중...')).toBeInTheDocument()
-    expect(submitQuizAttempt).toHaveBeenCalledWith(99, expect.any(Object))
   })
 })
 

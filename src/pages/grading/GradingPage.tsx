@@ -1,7 +1,9 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { generatePath, Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { generatePath, Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router'
 import { ROUTES } from '@/shared/config/routes'
 import { Button } from '@/shared/ui'
+import { submitQuizAttempt, fetchQuizAttemptResult } from '@/pages/quiz/api/quiz'
+import type { QuizSubmitRequest } from '@/pages/quiz/api/types'
 import '@/pages/grading/GradingPage.css'
 
 type GradingStatus = 'running' | 'success' | 'error'
@@ -15,54 +17,120 @@ const gradingSteps = [
 ] as const
 
 interface GradingFlowProps {
-  reportId: string
+  attemptId: number
 }
 
 export function GradingPage() {
-  const { reportId = '' } = useParams<{ reportId: string }>()
+  const { attemptId = '' } = useParams<{ attemptId: string }>()
+  const parsedAttemptId = Number(attemptId)
 
-  return <GradingFlow key={reportId} reportId={reportId} />
+  if (!Number.isFinite(parsedAttemptId) || parsedAttemptId <= 0) {
+    return null
+  }
+
+  return <GradingFlow key={parsedAttemptId} attemptId={parsedAttemptId} />
 }
 
-function GradingFlow({ reportId }: GradingFlowProps) {
+function GradingFlow({ attemptId }: GradingFlowProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const [activeStage, setActiveStage] = useState(0)
   const [attemptNumber, setAttemptNumber] = useState(0)
   const [status, setStatus] = useState<GradingStatus>('running')
 
+  const [reportId, setReportId] = useState<number>()
+  
+  const submitRequest = location.state?.submitRequest as QuizSubmitRequest | undefined
+
   const shouldFailFirstAttempt =
     import.meta.env.DEV && searchParams.get('mock') === 'failed'
   const progress = status === 'success' ? 100 : Math.round(((activeStage + 1) / gradingSteps.length) * 100)
-  const resultPath = generatePath(ROUTES.resultReport, { reportId })
+  const resultPath = reportId ? generatePath(ROUTES.resultReport, { reportId: String(reportId) }) : ''
 
   useEffect(() => {
+    let isMounted = true
     const timers: number[] = []
     const willFail = shouldFailFirstAttempt && attemptNumber === 0
 
     gradingSteps.slice(1, willFail ? 3 : undefined).forEach((_, index) => {
-      timers.push(window.setTimeout(() => setActiveStage(index + 1), 800 * (index + 1)))
+      timers.push(window.setTimeout(() => {
+        if (isMounted) setActiveStage(index + 1)
+      }, 800 * (index + 1)))
     })
 
-    timers.push(
-      window.setTimeout(
-        () => setStatus(willFail ? 'error' : 'success'),
-        willFail ? 2400 : 4000,
-      ),
-    )
+    async function runFlow() {
+      const minDelay = new Promise((resolve) => {
+        timers.push(window.setTimeout(resolve, 3000))
+      })
 
-    return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [attemptNumber, reportId, shouldFailFirstAttempt])
+      try {
+        let resultReportId: number
+        
+        if (submitRequest) {
+          // 정상 제출 흐름
+          const [result] = await Promise.all([
+            submitQuizAttempt(attemptId, submitRequest),
+            minDelay
+          ])
+          resultReportId = result.reportId
+        } else {
+          // 새로고침 시 복구 흐름 (답안이 없으므로 이미 제출된 결과를 조회)
+          const [result] = await Promise.all([
+            fetchQuizAttemptResult(attemptId),
+            minDelay
+          ])
+          resultReportId = result.reportId
+        }
+        
+        if (!isMounted) return
+        setReportId(resultReportId)
+        setActiveStage(gradingSteps.length - 1)
+        setStatus('success')
+      } catch (error: unknown) {
+        if (!isMounted) return
+        
+        const apiError = error as { response?: { status?: number }, code?: string }
+        // 중복 제출 에러(이미 처리됨) 시 결과 다시 조회 시도
+        if (submitRequest && (apiError.response?.status === 409 || apiError.code === 'ATTEMPT_ALREADY_SUBMITTED')) {
+          try {
+            const fallbackResult = await fetchQuizAttemptResult(attemptId)
+            setReportId(fallbackResult.reportId)
+            setActiveStage(gradingSteps.length - 1)
+            setStatus('success')
+            return
+          } catch {
+            setStatus('error')
+            return
+          }
+        }
+        
+        // 데이터가 아예 없는 비정상 접근 시 홈으로 (fetchQuizAttemptResult마저 404인 경우)
+        if (!submitRequest && apiError.response?.status === 404) {
+          navigate(ROUTES.home, { replace: true })
+          return
+        }
+        
+        setStatus('error')
+      }
+    }
 
-  useEffect(() => {
-    if (status !== 'success') return
+    if (willFail) {
+      timers.push(
+        window.setTimeout(() => {
+          if (isMounted) setStatus('error')
+        }, 2400)
+      )
+    } else {
+      void runFlow()
+    }
 
-    const timer = window.setTimeout(() => {
-      void navigate(resultPath, { replace: true })
-    }, 600)
+    return () => {
+      isMounted = false
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [attemptId, attemptNumber, submitRequest, navigate, shouldFailFirstAttempt])
 
-    return () => window.clearTimeout(timer)
-  }, [navigate, resultPath, status])
 
   function retryGrading() {
     setActiveStage(0)

@@ -16,6 +16,7 @@ export interface QuestionResult {
 }
 
 export interface ResultReport {
+  reportId: number
   accuracyRate: number
   attemptId: number
   completedAt: string
@@ -29,6 +30,7 @@ export interface ResultReport {
 }
 
 export const mockResultReport: ResultReport = {
+  reportId: 401,
   quizSetId: 201,
   attemptId: 601,
   title: 'Spring @Transactional 심층 이해',

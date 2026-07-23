@@ -58,7 +58,7 @@ function ReportLoadingState() {
   )
 }
 
-function ReportErrorState({ state }: { state: 'not-ready' | 'not-found' | 'forbidden' }) {
+function ReportErrorState({ state }: { state: 'not-ready' | 'not-found' | 'forbidden' | 'unknown-error' }) {
   const content = {
     'not-ready': {
       code: 'REPORT_NOT_READY',
@@ -74,6 +74,11 @@ function ReportErrorState({ state }: { state: 'not-ready' | 'not-found' | 'forbi
       code: 'FORBIDDEN',
       title: '결과 리포트에 접근할 수 없습니다',
       description: '본인의 학습 결과만 확인할 수 있습니다.',
+    },
+    'unknown-error': {
+      code: 'UNKNOWN_ERROR',
+      title: '일시적인 오류가 발생했습니다',
+      description: '네트워크 상태가 불안정하거나 서버에 문제가 발생했습니다.',
     },
   }[state]
 
@@ -94,7 +99,11 @@ export function ResultReportPage() {
   if (isLoading) return <ReportLoadingState />
   
   if (error || !report) {
-    const state = error?.status === 404 ? 'not-found' : error?.status === 403 ? 'forbidden' : 'not-ready'
+    let state: 'not-ready' | 'not-found' | 'forbidden' | 'unknown-error' = 'unknown-error'
+    if (error?.status === 404) state = 'not-found'
+    else if (error?.status === 403) state = 'forbidden'
+    else if (!error && !report) state = 'not-ready'
+    
     return <ReportErrorState state={state} />
   }
   const incorrectCount = report.totalCount - report.correctCount

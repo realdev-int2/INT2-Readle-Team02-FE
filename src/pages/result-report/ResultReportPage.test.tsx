@@ -66,7 +66,7 @@ describe('ResultReportPage', () => {
   it('unknown-error 에러 상태를 렌더링한다', async () => {
     vi.mocked(getResultReportDetail).mockRejectedValueOnce(new Error('Unknown Error'))
     renderPage('unknown-error')
-    expect(await screen.findByText('결과 리포트를 준비하고 있습니다')).toBeInTheDocument()
+    expect(await screen.findByText('일시적인 오류가 발생했습니다')).toBeInTheDocument()
   })
 })
 

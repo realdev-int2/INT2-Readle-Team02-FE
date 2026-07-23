@@ -42,4 +42,25 @@ describe('fetchHistory', () => {
       { requiresAuth: true },
     )
   })
+
+  it.each([1, 50])('허용 범위의 size=%d를 전달한다', async (size) => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      content: [],
+      hasNext: false,
+      nextCursor: null,
+      size,
+    })
+
+    await fetchHistory({ size, sort: 'latest' })
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      `/result-reports?size=${size}&sort=latest`,
+      { requiresAuth: true },
+    )
+  })
+
+  it.each([0, -1, 1.5, 51])('허용 범위를 벗어난 size=%s를 거부한다', (size) => {
+    expect(() => fetchHistory({ size, sort: 'latest' })).toThrow(RangeError)
+    expect(apiRequest).not.toHaveBeenCalled()
+  })
 })

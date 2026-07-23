@@ -23,10 +23,10 @@ export function createContent(request: ContentCreateRequest) {
   })
 }
 
-export function getContentValidation(contentId: number) {
+export function getContentValidation(contentId: number, signal?: AbortSignal) {
   return apiRequest<ContentValidationResponse>(
     `/contents/${contentId}/validation`,
-    { requiresAuth: true },
+    { requiresAuth: true, signal },
   )
 }
 

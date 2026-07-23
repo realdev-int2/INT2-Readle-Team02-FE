@@ -6,7 +6,7 @@ import type { ApiError } from '@/shared/api/error'
 export function useValidationPolling(contentId: number) {
   return useQuery<ContentValidationResponse, ApiError>({
     queryKey: ['content-validation', contentId],
-    queryFn: () => getContentValidation(contentId),
+    queryFn: ({ signal }) => getContentValidation(contentId, signal),
     enabled: contentId > 0,
     refetchInterval: (query) => {
       const status = query.state.data?.status

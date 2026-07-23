@@ -129,7 +129,7 @@ export function HistoryPage() {
           <Loading label="학습 기록을 불러오는 중" size="lg" />
           <h2>학습 기록을 불러오고 있습니다</h2>
         </section>
-      ) : historyQuery.isError ? (
+      ) : historyQuery.isError && records.length === 0 ? (
         <section className="history-state">
           <ErrorMessage>학습 기록을 불러오지 못했습니다.</ErrorMessage>
           <h2>히스토리를 확인할 수 없습니다</h2>
@@ -151,7 +151,12 @@ export function HistoryPage() {
             {records.map((record) => <HistoryRecordCard key={record.reportId} record={record} />)}
           </ul>
           <div className="history-pagination">
-            {historyQuery.hasNextPage ? (
+            {historyQuery.isFetchNextPageError ? (
+              <>
+                <ErrorMessage>다음 학습 기록을 불러오지 못했습니다.</ErrorMessage>
+                <Button onClick={() => void historyQuery.fetchNextPage()}>다시 시도</Button>
+              </>
+            ) : historyQuery.hasNextPage ? (
               <Button
                 disabled={historyQuery.isFetchingNextPage}
                 onClick={() => void historyQuery.fetchNextPage()}

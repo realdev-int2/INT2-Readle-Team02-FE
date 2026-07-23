@@ -67,6 +67,7 @@ describe('HistoryPage', () => {
       },
       hasNextPage: false,
       isError: false,
+      isFetchNextPageError: false,
       isPending: false,
     } as never)
   })
@@ -111,6 +112,7 @@ describe('HistoryPage', () => {
       },
       hasNextPage: false,
       isError: false,
+      isFetchNextPageError: false,
       isPending: false,
     } as never)
     const user = userEvent.setup()
@@ -119,5 +121,33 @@ describe('HistoryPage', () => {
     expect(screen.getByText('선택한 태그의 학습 기록이 없습니다')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '전체 기록 보기' }))
     expect(screen.getByLabelText('현재 주소')).toHaveTextContent('/history')
+  })
+
+  it('다음 페이지 조회 실패 시 기존 기록을 유지하고 재시도할 수 있다', async () => {
+    const fetchNextPage = vi.fn()
+    vi.mocked(useHistory).mockReturnValue({
+      data: {
+        pages: [{
+          content: [historyRecord],
+          hasNext: true,
+          nextCursor: '701',
+          size: 10,
+        }],
+        pageParams: [null],
+      },
+      fetchNextPage,
+      hasNextPage: true,
+      isError: true,
+      isFetchNextPageError: true,
+      isPending: false,
+    } as never)
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(screen.getByText('Spring 트랜잭션 학습')).toBeInTheDocument()
+    expect(screen.getByText('다음 학습 기록을 불러오지 못했습니다.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    expect(fetchNextPage).toHaveBeenCalledOnce()
   })
 })

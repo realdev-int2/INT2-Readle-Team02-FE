@@ -35,6 +35,8 @@ export function formatHistoryDate(value: string) {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
     timeZone: 'Asia/Seoul',
   }).format(parseHistoryTimestamp(value))
 }

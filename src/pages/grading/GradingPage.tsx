@@ -24,7 +24,18 @@ interface GradingFlowProps {
 function isValidSubmitRequest(data: unknown): data is QuizSubmitRequest {
   if (!data || typeof data !== 'object') return false
   const req = data as Record<string, unknown>
-  return Array.isArray(req.answers)
+  if (!Array.isArray(req.answers)) return false
+
+  return req.answers.every((ans: unknown) => {
+    if (!ans || typeof ans !== 'object') return false
+    const answer = ans as Record<string, unknown>
+    
+    if (typeof answer.questionId !== 'number') return false
+    if (answer.submittedChoiceId !== undefined && typeof answer.submittedChoiceId !== 'number') return false
+    if (answer.submittedAnswerText !== undefined && typeof answer.submittedAnswerText !== 'string') return false
+    
+    return true
+  })
 }
 
 export function GradingPage() {

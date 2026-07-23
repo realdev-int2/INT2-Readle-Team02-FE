@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { mockDashboard } from '@/mocks/fixtures/dashboard'
+import { parseHistoryTimestamp } from '@/pages/history/model/history'
 import type { HistoryResponse, HistorySort } from '@/pages/history/model/history'
 
 const mockHistoryRecords = mockDashboard.recentRecords.map((record, index) => ({
@@ -19,11 +20,14 @@ export const historyHandlers = [
     const size = Number.isInteger(requestedSize) && requestedSize > 0 ? requestedSize : 10
     const sortedRecords = mockHistoryRecords
       .filter((record) => !tagId || record.tags.some((tag) => tag.tagId === tagId))
-      .toSorted((left, right) =>
-        sort === 'latest'
-          ? right.completedAt.localeCompare(left.completedAt)
-          : left.completedAt.localeCompare(right.completedAt),
-      )
+      .toSorted((left, right) => {
+        const leftTimestamp = parseHistoryTimestamp(left.completedAt).getTime()
+        const rightTimestamp = parseHistoryTimestamp(right.completedAt).getTime()
+
+        return sort === 'latest'
+          ? rightTimestamp - leftTimestamp
+          : leftTimestamp - rightTimestamp
+      })
     const cursorIndex = cursor
       ? sortedRecords.findIndex((record) => String(record.reportId) === cursor)
       : -1

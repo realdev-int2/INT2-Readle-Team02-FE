@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { generatePath, Link, useParams, useSearchParams } from 'react-router'
+import { generatePath, Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ROUTES } from '@/shared/config/routes'
 import { Button } from '@/shared/ui'
 import '@/pages/grading/GradingPage.css'
@@ -15,24 +15,26 @@ const gradingSteps = [
 ] as const
 
 interface GradingFlowProps {
-  attemptId: string
+  reportId: string
 }
 
 export function GradingPage() {
-  const { attemptId = '' } = useParams<{ attemptId: string }>()
+  const { reportId = '' } = useParams<{ reportId: string }>()
 
-  return <GradingFlow attemptId={attemptId} key={attemptId} />
+  return <GradingFlow key={reportId} reportId={reportId} />
 }
 
-function GradingFlow({ attemptId }: GradingFlowProps) {
+function GradingFlow({ reportId }: GradingFlowProps) {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [activeStage, setActiveStage] = useState(0)
   const [attemptNumber, setAttemptNumber] = useState(0)
   const [status, setStatus] = useState<GradingStatus>('running')
 
-  const shouldFailFirstAttempt = searchParams.get('mock') === 'failed'
+  const shouldFailFirstAttempt =
+    import.meta.env.DEV && searchParams.get('mock') === 'failed'
   const progress = status === 'success' ? 100 : Math.round(((activeStage + 1) / gradingSteps.length) * 100)
-  const resultPath = generatePath(ROUTES.resultReport, { reportId: 'mock-report' })
+  const resultPath = generatePath(ROUTES.resultReport, { reportId })
 
   useEffect(() => {
     const timers: number[] = []
@@ -50,7 +52,17 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
     )
 
     return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [attemptId, attemptNumber, shouldFailFirstAttempt])
+  }, [attemptNumber, reportId, shouldFailFirstAttempt])
+
+  useEffect(() => {
+    if (status !== 'success') return
+
+    const timer = window.setTimeout(() => {
+      void navigate(resultPath, { replace: true })
+    }, 600)
+
+    return () => window.clearTimeout(timer)
+  }, [navigate, resultPath, status])
 
   function retryGrading() {
     setActiveStage(0)

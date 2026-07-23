@@ -29,3 +29,10 @@ export function getContentValidation(contentId: number) {
     { requiresAuth: true },
   )
 }
+
+export function retryContentValidation(contentId: number) {
+  return apiRequest<ContentValidationResponse>(
+    `/contents/${contentId}/validation/retry`,
+    { method: 'POST', requiresAuth: true },
+  )
+}

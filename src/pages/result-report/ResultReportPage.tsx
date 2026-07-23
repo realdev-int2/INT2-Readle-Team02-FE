@@ -1,29 +1,15 @@
 import type { CSSProperties } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import {
   formatCompletedAt,
   formatDuration,
-  mockResultReport,
   type QuestionResult,
 } from '@/pages/result-report/model/resultReport'
 import { questionTypeLabel } from '@/pages/quiz/model/quiz'
 import { ROUTES } from '@/shared/config/routes'
 import { ErrorMessage, Loading } from '@/shared/ui'
+import { useResultReportDetail } from '@/pages/result-report/api/useResultReportDetail'
 import '@/pages/result-report/ResultReportPage.css'
-
-type ReportMockState = 'ready' | 'loading' | 'not-ready' | 'not-found' | 'forbidden'
-
-function parseReportMockState(value: string | null): ReportMockState {
-  switch (value) {
-    case 'loading':
-    case 'not-ready':
-    case 'not-found':
-    case 'forbidden':
-      return value
-    default:
-      return 'ready'
-  }
-}
 
 function QuestionResultItem({ result }: { result: QuestionResult }) {
   return (
@@ -72,7 +58,7 @@ function ReportLoadingState() {
   )
 }
 
-function ReportErrorState({ state }: { state: Exclude<ReportMockState, 'ready' | 'loading'> }) {
+function ReportErrorState({ state }: { state: 'not-ready' | 'not-found' | 'forbidden' }) {
   const content = {
     'not-ready': {
       code: 'REPORT_NOT_READY',
@@ -102,13 +88,15 @@ function ReportErrorState({ state }: { state: Exclude<ReportMockState, 'ready' |
 }
 
 export function ResultReportPage() {
-  const [searchParams] = useSearchParams()
-  const mockState = parseReportMockState(searchParams.get('mock'))
+  const { reportId = '' } = useParams<{ reportId: string }>()
+  const { data: report, isLoading, error } = useResultReportDetail(reportId)
 
-  if (mockState === 'loading') return <ReportLoadingState />
-  if (mockState !== 'ready') return <ReportErrorState state={mockState} />
-
-  const report = mockResultReport
+  if (isLoading) return <ReportLoadingState />
+  
+  if (error || !report) {
+    const state = error?.status === 404 ? 'not-found' : error?.status === 403 ? 'forbidden' : 'not-ready'
+    return <ReportErrorState state={state} />
+  }
   const incorrectCount = report.totalCount - report.correctCount
   const scoreStyle = { '--result-score': `${report.accuracyRate * 3.6}deg` } as CSSProperties
 

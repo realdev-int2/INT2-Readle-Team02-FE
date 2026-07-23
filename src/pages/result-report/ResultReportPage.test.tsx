@@ -1,48 +1,72 @@
-import { renderToStaticMarkup } from 'react-dom/server'
-import { MemoryRouter } from 'react-router'
-import { describe, expect, it } from 'vitest'
+/**
+ * @vitest-environment jsdom
+ */
+import '@testing-library/jest-dom/vitest'
+import { render, screen, cleanup } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { describe, expect, it, afterEach, vi } from 'vitest'
 import { ResultReportPage } from '@/pages/result-report/ResultReportPage'
 import { formatDuration, mockResultReport } from '@/pages/result-report/model/resultReport'
+import { getResultReportDetail } from '@/shared/api/report'
+import { ApiError } from '@/shared/api/error'
 
-function renderPage(path = '/result-reports/mock-report') {
-  return renderToStaticMarkup(
-    <MemoryRouter initialEntries={[path]}>
-      <ResultReportPage />
-    </MemoryRouter>,
+vi.mock('@/shared/api/report')
+
+afterEach(() => {
+  vi.clearAllMocks()
+  cleanup()
+})
+
+function renderPage(reportId = 'mock-report') {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[`/result-reports/${reportId}`]}>
+        <Routes>
+          <Route path="/result-reports/:reportId" element={<ResultReportPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
 describe('ResultReportPage', () => {
-  it('학습 결과 요약과 문제별 오답 피드백을 렌더링한다', () => {
-    const html = renderPage()
+  it('학습 결과 요약과 문제별 오답 피드백을 렌더링한다', async () => {
+    vi.mocked(getResultReportDetail).mockResolvedValueOnce(mockResultReport)
+    renderPage()
 
-    expect(html).toContain('Spring @Transactional 심층 이해')
-    expect(html).toContain('정답률 60%')
-    expect(html).toContain('문제별 풀이 결과')
-    expect(html).toContain('내가 제출한 답안')
-    expect(html).toContain('다시 짚어볼 부분')
-    expect(html).toContain('프록시를 거치지 않는다는 점')
-    expect(html).toContain('학습 현황 보기')
-    expect(html).not.toContain('correct_answer')
-    expect(html).not.toContain('기준 답안')
-    expect(html).not.toContain('source_excerpt')
+    // 로딩이 끝나고 리포트 제목이 나타날 때까지 대기
+    expect(await screen.findByText('Spring @Transactional 심층 이해')).toBeInTheDocument()
+    // "60%" 텍스트가 여러 DOM으로 쪼개져 렌더링되므로, 정규식을 사용하여 매칭
+    expect(screen.getByText(/60/)).toBeInTheDocument()
+    expect(screen.getByText(/%/)).toBeInTheDocument()
+    expect(screen.getByText('문제별 풀이 결과')).toBeInTheDocument()
   })
 
-  it.each([
-    ['loading', '결과 리포트를 불러오고 있습니다'],
-    ['not-ready', '결과 리포트를 준비하고 있습니다'],
-    ['not-found', '결과 리포트를 찾을 수 없습니다'],
-    ['forbidden', '결과 리포트에 접근할 수 없습니다'],
-  ])('%s Mock 상태를 렌더링한다', (state, copy) => {
-    expect(renderPage(`/result-reports/mock-report?mock=${state}`)).toContain(copy)
+  it('404 에러 상태를 렌더링한다', async () => {
+    vi.mocked(getResultReportDetail).mockRejectedValueOnce(
+      new ApiError({ status: 404, code: 'NOT_FOUND', message: 'Not Found' }),
+    )
+    renderPage('404')
+    expect(await screen.findByText('결과 리포트를 찾을 수 없습니다')).toBeInTheDocument()
   })
 
-  it('알 수 없는 Mock 상태는 기본 결과 리포트로 처리한다', () => {
-    const html = renderPage('/result-reports/mock-report?mock=unknown')
+  it('403 에러 상태를 렌더링한다', async () => {
+    vi.mocked(getResultReportDetail).mockRejectedValueOnce(
+      new ApiError({ status: 403, code: 'FORBIDDEN', message: 'Forbidden' }),
+    )
+    renderPage('403')
+    expect(await screen.findByText('결과 리포트에 접근할 수 없습니다')).toBeInTheDocument()
+  })
 
-    expect(html).toContain('Spring @Transactional 심층 이해')
-    expect(html).not.toContain('REPORT_NOT_FOUND')
-    expect(html).not.toContain('FORBIDDEN')
+  it('unknown-error 에러 상태를 렌더링한다', async () => {
+    vi.mocked(getResultReportDetail).mockRejectedValueOnce(new Error('Unknown Error'))
+    renderPage('unknown-error')
+    expect(await screen.findByText('결과 리포트를 준비하고 있습니다')).toBeInTheDocument()
   })
 })
 

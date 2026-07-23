@@ -36,8 +36,13 @@ function renderPage(reportId = 'mock-report') {
 
 describe('ResultReportPage', () => {
   it('학습 결과 요약과 문제별 오답 피드백을 렌더링한다', async () => {
-    vi.mocked(getResultReportDetail).mockResolvedValueOnce(mockResultReport)
+    vi.mocked(getResultReportDetail).mockImplementationOnce(() => 
+      new Promise(resolve => setTimeout(() => resolve(mockResultReport), 100))
+    )
     renderPage()
+
+    // 로딩 상태 검증
+    expect(screen.getByText('결과 리포트를 불러오고 있습니다')).toBeInTheDocument()
 
     // 로딩이 끝나고 리포트 제목이 나타날 때까지 대기
     expect(await screen.findByText('Spring @Transactional 심층 이해')).toBeInTheDocument()

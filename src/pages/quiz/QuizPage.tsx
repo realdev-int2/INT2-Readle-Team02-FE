@@ -298,6 +298,11 @@ export function QuizPage() {
 
     const submitRequest = formatAnswersForSubmit(detail.questions, answers)
     
+    // 채점 중 새로고침 대비를 위해 sessionStorage에 저장
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(`quiz_submit_${attemptId}`, JSON.stringify(submitRequest))
+    }
+    
     // GradingPage로 즉시 이동하며 퀴즈 제출 요청 데이터를 라우터 state로 전달
     void navigate(generatePath(ROUTES.grading, { attemptId: String(attemptId) }), {
       state: { submitRequest },

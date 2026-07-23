@@ -25,7 +25,15 @@ export function GradingPage() {
   const parsedAttemptId = Number(attemptId)
 
   if (!Number.isFinite(parsedAttemptId) || parsedAttemptId <= 0) {
-    return null
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center py-8 sm:py-10 lg:py-12" role="alert">
+        <div className="flex max-w-[26rem] flex-col items-center gap-4 rounded-2xl border border-rose-400/20 bg-rose-950/40 px-8 py-10 text-center">
+          <span className="text-3xl text-rose-500" aria-hidden="true">⚠</span>
+          <h1 className="m-0 text-xl font-bold text-white">잘못된 접근입니다</h1>
+          <p className="m-0 text-sm leading-relaxed text-slate-300">올바른 경로로 다시 접속해 주세요.</p>
+        </div>
+      </div>
+    )
   }
 
   return <GradingFlow key={parsedAttemptId} attemptId={parsedAttemptId} />
@@ -41,7 +49,17 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
 
   const [reportId, setReportId] = useState<number>()
   
-  const submitRequest = location.state?.submitRequest as QuizSubmitRequest | undefined
+  let submitRequest = location.state?.submitRequest as QuizSubmitRequest | undefined
+  if (!submitRequest && typeof sessionStorage !== 'undefined') {
+    const stored = sessionStorage.getItem(`quiz_submit_${attemptId}`)
+    if (stored) {
+      try {
+        submitRequest = JSON.parse(stored) as QuizSubmitRequest
+      } catch {
+        // ignore parse error
+      }
+    }
+  }
 
   const shouldFailFirstAttempt =
     import.meta.env.DEV && searchParams.get('mock') === 'failed'
@@ -95,18 +113,21 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
         if (submitRequest && (apiError.response?.status === 409 || apiError.code === 'ATTEMPT_ALREADY_SUBMITTED')) {
           try {
             const fallbackResult = await fetchQuizAttemptResult(attemptId)
+            if (!isMounted) return
             setReportId(fallbackResult.reportId)
             setActiveStage(gradingSteps.length - 1)
             setStatus('success')
             return
           } catch {
+            if (!isMounted) return
             setStatus('error')
             return
           }
         }
         
-        // 데이터가 아예 없는 비정상 접근 시 홈으로 (fetchQuizAttemptResult마저 404인 경우)
-        if (!submitRequest && apiError.response?.status === 404) {
+        // 데이터가 없거나 권한이 없는 등 영구적 오류 접근 시 홈으로 리다이렉트
+        const errorStatus = apiError.response?.status
+        if (!submitRequest && (errorStatus === 404 || errorStatus === 403 || errorStatus === 401)) {
           navigate(ROUTES.home, { replace: true })
           return
         }
@@ -131,6 +152,11 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
     }
   }, [attemptId, attemptNumber, submitRequest, navigate, shouldFailFirstAttempt])
 
+  useEffect(() => {
+    if (status === 'success' && typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(`quiz_submit_${attemptId}`)
+    }
+  }, [status, attemptId])
 
   function retryGrading() {
     setActiveStage(0)

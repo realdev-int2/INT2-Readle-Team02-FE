@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from 'react'
 import '@testing-library/jest-dom/vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -104,5 +105,39 @@ describe('GradingPage', () => {
     expect(submitQuizAttempt).toHaveBeenCalledTimes(1)
     
     sessionStorageSpy.mockRestore()
+  })
+
+  it('StrictMode 환경의 effect 재실행 시에도 제출은 1회만 발생한다', async () => {
+    vi.useFakeTimers()
+    vi.mocked(submitQuizAttempt).mockClear()
+    
+    vi.mocked(submitQuizAttempt).mockResolvedValueOnce({
+      reportId: 701,
+      attemptId: 99,
+      gradingStatus: 'completed',
+      accuracyRate: 100,
+      correctCount: 2,
+      totalCount: 2,
+      solveDurationSeconds: 120,
+      completedAt: new Date().toISOString(),
+      results: []
+    })
+
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={[{ pathname: '/quizzes/attempts/99/grading', state: { submitRequest: { answers: [] } } }]}>
+          <Routes>
+            <Route path="/quizzes/attempts/:attemptId/grading" element={<GradingPage />} />
+          </Routes>
+        </MemoryRouter>
+      </StrictMode>
+    )
+
+    await act(async () => {
+      vi.advanceTimersByTime(10000)
+    })
+
+    // React 18 StrictMode에서는 mount -> unmount -> mount 순으로 effect가 재실행되지만, API 호출은 1번만 일어남을 검증
+    expect(submitQuizAttempt).toHaveBeenCalledTimes(1)
   })
 })

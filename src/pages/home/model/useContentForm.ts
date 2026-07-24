@@ -43,6 +43,7 @@ export function useContentForm() {
   }
 
   function resetExtractState() {
+    submitGenerationRef.current += 1
     setUrlValues((current) => ({
       ...initialContentInputValues,
       url: current.url

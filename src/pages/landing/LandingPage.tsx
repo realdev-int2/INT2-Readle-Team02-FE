@@ -195,6 +195,10 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
   const profileLabel = member ? `${member.nickname} 프로필` : '프로필'
 
   useEffect(() => {
+    if (member) {
+      return
+    }
+
     const params = new URLSearchParams(location.search)
     if (!params.has('authError')) {
       return
@@ -215,7 +219,7 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
       },
       { replace: true },
     )
-  }, [location.hash, location.pathname, location.search, navigate])
+  }, [location.hash, location.pathname, location.search, member, navigate])
 
   useEffect(() => {
     if (authError === 'session_expired') {
@@ -256,7 +260,12 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
   }
 
   if (isLoading) {
-    return null
+    return (
+      <div className="grid min-h-screen place-items-center bg-surface-canvas text-text-muted" role="status">
+        <span className="sr-only">사용자 인증 정보를 확인하는 중입니다...</span>
+        <div aria-hidden="true" className="size-8 animate-spin rounded-full border-4 border-brand-400/30 border-t-brand-400" />
+      </div>
+    )
   }
 
   if (member && !isLoggingOut) {

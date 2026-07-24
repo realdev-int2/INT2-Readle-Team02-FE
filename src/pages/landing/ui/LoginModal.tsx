@@ -77,7 +77,7 @@ export function LoginModal({ authError, onClose, open }: LoginModalProps) {
       ? ROUTES.home
       : sanitizeReturnTo(
           new URLSearchParams(window.location.search).get('returnTo') ??
-            (window.location.pathname === ROUTES.landing
+            (window.location.pathname === ROUTES.landing || window.location.pathname === ROUTES.login
               ? ROUTES.home
               : window.location.pathname + window.location.search),
         )

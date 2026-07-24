@@ -96,12 +96,10 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
 
   useEffect(() => {
     let isMounted = true
-    const submitFiredRef = submitFired.current
-    
     const key = `${attemptId}-${attemptNumber}`
     // StrictMode 등에서 중복 실행되는 것을 방지
-    if (submitFiredRef.has(key)) return
-    submitFiredRef.add(key)
+    if (submitFired.current.has(key)) return
+    submitFired.current.add(key)
     
     const timers: number[] = []
     const willFail = shouldFailFirstAttempt && attemptNumber === 0
@@ -183,7 +181,6 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
 
     return () => {
       isMounted = false
-      submitFiredRef.delete(key)
       timers.forEach((timer) => window.clearTimeout(timer))
     }
   }, [attemptId, attemptNumber, submitRequest, navigate, shouldFailFirstAttempt])

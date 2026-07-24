@@ -47,9 +47,9 @@ describe('ResultReportPage', () => {
 
     // 로딩이 끝나고 리포트 제목이 나타날 때까지 대기
     expect(await screen.findByText('Spring @Transactional 심층 이해')).toBeInTheDocument()
-    // "40%" 텍스트가 여러 DOM으로 쪼개져 렌더링되므로, 정규식을 사용하여 매칭
-    expect(screen.getByText(/40/)).toBeInTheDocument()
-    expect(screen.getByText(/%/)).toBeInTheDocument()
+    const scoreRing = screen.getByLabelText('정답률 40%')
+    expect(scoreRing).toBeInTheDocument()
+    expect(scoreRing).toHaveTextContent('40%')
     expect(screen.getByText('문제별 풀이 결과')).toBeInTheDocument()
   })
 

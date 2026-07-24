@@ -269,12 +269,14 @@
 }
 
 .result-answer-panel,
+.result-correct-panel,
 .result-feedback-panel {
   padding-left: 1rem;
   border-left: 2px solid var(--color-border-strong);
 }
 
 .result-answer-panel h3,
+.result-correct-panel h3,
 .result-feedback-panel h3 {
   margin: 0;
   color: var(--color-text-muted);
@@ -282,6 +284,7 @@
 }
 
 .result-answer-panel p,
+.result-correct-panel p,
 .result-feedback-panel p {
   margin: 0.5rem 0 0;
   color: var(--color-text-secondary);
@@ -293,6 +296,15 @@
   display: block;
   margin-top: 0.5rem;
   color: var(--color-text-primary);
+}
+
+.result-correct-panel {
+  border-left-color: var(--color-status-success);
+}
+
+.result-correct-panel p {
+  color: var(--color-status-success);
+  font-weight: 600;
 }
 
 .result-feedback-panel {

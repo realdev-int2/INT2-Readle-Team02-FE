@@ -333,14 +333,24 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
                 읽고 끝내지 말고, 풀고 피드백받으며 진짜 내 것으로 만드세요.
               </p>
               <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
-                <button
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-linear-to-r from-brand-400 to-brand-600 px-6 text-label font-bold text-white shadow-button transition-all hover:-translate-y-0.5 hover:shadow-button-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-400"
-                  onClick={openLogin}
-                  type="button"
-                >
-                  학습 시작하기
-                  <span aria-hidden="true">→</span>
-                </button>
+                {member ? (
+                  <Link
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-linear-to-r from-brand-400 to-brand-600 px-6 text-label font-bold text-white shadow-button transition-all hover:-translate-y-0.5 hover:shadow-button-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-400"
+                    to={ROUTES.home}
+                  >
+                    학습 시작하기
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                ) : (
+                  <button
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-linear-to-r from-brand-400 to-brand-600 px-6 text-label font-bold text-white shadow-button transition-all hover:-translate-y-0.5 hover:shadow-button-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-400"
+                    onClick={openLogin}
+                    type="button"
+                  >
+                    학습 시작하기
+                    <span aria-hidden="true">→</span>
+                  </button>
+                )}
                 <a
                   className="inline-flex min-h-12 items-center justify-center rounded-control border border-border-strong bg-surface-panel/60 px-6 text-label font-semibold text-text-secondary transition-colors hover:bg-surface-elevated hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-400"
                   href="#how-it-works"
@@ -475,14 +485,24 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
               <p className="mx-auto mt-5 max-w-2xl text-body leading-7 text-text-secondary">
                 URL 하나만 준비하면 됩니다. 나머지 학습 흐름은 Readle이 연결합니다.
               </p>
-              <button
-                className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-control bg-white px-6 text-label font-bold text-text-inverse transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-                onClick={openLogin}
-                type="button"
-              >
-                지금 시작하기
-                <span aria-hidden="true">→</span>
-              </button>
+              {member ? (
+                <Link
+                  className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-control bg-white px-6 text-label font-bold text-text-inverse transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                  to={ROUTES.home}
+                >
+                  지금 시작하기
+                  <span aria-hidden="true">→</span>
+                </Link>
+              ) : (
+                <button
+                  className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-control bg-white px-6 text-label font-bold text-text-inverse transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                  onClick={openLogin}
+                  type="button"
+                >
+                  지금 시작하기
+                  <span aria-hidden="true">→</span>
+                </button>
+              )}
             </div>
           </PageContainer>
         </section>

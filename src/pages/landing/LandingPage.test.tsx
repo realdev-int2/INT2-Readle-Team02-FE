@@ -75,6 +75,8 @@ describe('LandingPage', () => {
     expect(html).toContain('aria-label="테스트 사용자 프로필"')
     expect(html).toContain('>로그아웃</button>')
     expect(html).not.toContain('>로그인</button>')
+    expect(html.match(/href="\/learn"/g)).toHaveLength(2)
+    expect(html).not.toContain('role="dialog"')
   })
 
   it('프로필 이미지 URL을 프로필 아바타에 전달한다', () => {
@@ -88,12 +90,12 @@ describe('LandingPage', () => {
     expect(html).toContain('src="https://readle.local/profile.png"')
   })
 
-  it('Google과 카카오 OAuth 시작 링크를 root returnTo로 표시한다', () => {
+  it('랜딩에서 시작한 Google과 카카오 OAuth의 기본 복귀 경로를 학습 화면으로 표시한다', () => {
     const html = renderLanding(true)
 
     expect(html).toContain('role="dialog"')
     expect(html).toContain('다시 만나 반갑습니다')
-    expectOAuthReturnTo(html, '/')
+    expectOAuthReturnTo(html, '/learn')
     expect(html).not.toContain('Google 로그인 연동은 준비 중입니다.')
     expect(html).not.toContain('카카오 로그인 연동은 준비 중입니다.')
   })

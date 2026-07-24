@@ -3,6 +3,7 @@
  */
 import '@testing-library/jest-dom/vitest'
 import { render, screen, cleanup } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, afterEach, vi } from 'vitest'
@@ -46,8 +47,8 @@ describe('ResultReportPage', () => {
 
     // 로딩이 끝나고 리포트 제목이 나타날 때까지 대기
     expect(await screen.findByText('Spring @Transactional 심층 이해')).toBeInTheDocument()
-    // "60%" 텍스트가 여러 DOM으로 쪼개져 렌더링되므로, 정규식을 사용하여 매칭
-    expect(screen.getByText(/60/)).toBeInTheDocument()
+    // "40%" 텍스트가 여러 DOM으로 쪼개져 렌더링되므로, 정규식을 사용하여 매칭
+    expect(screen.getByText(/40/)).toBeInTheDocument()
     expect(screen.getByText(/%/)).toBeInTheDocument()
     expect(screen.getByText('문제별 풀이 결과')).toBeInTheDocument()
   })
@@ -75,10 +76,21 @@ describe('ResultReportPage', () => {
   })
 
   it('객관식 문항 오답 시 정답 선택지(번호 및 내용)를 렌더링한다', async () => {
+    const user = userEvent.setup()
     vi.mocked(getResultReportDetail).mockResolvedValueOnce(mockResultReport)
     renderPage()
 
     expect(await screen.findByText('Spring @Transactional 심층 이해')).toBeInTheDocument()
+
+    const questionText = screen.getByText(
+      '기존 트랜잭션의 존재 여부와 관계없이 항상 새로운 트랜잭션을 시작하는 전파 속성은 무엇인가요?',
+    )
+    const detailsElement = questionText.closest('details')
+    expect(detailsElement).toBeInTheDocument()
+
+    await user.click(questionText)
+    expect(detailsElement).toHaveAttribute('open')
+
     expect(screen.getByText('정답 선택지')).toBeInTheDocument()
     expect(screen.getByText(/3번\. REQUIRES_NEW/)).toBeInTheDocument()
   })
@@ -91,6 +103,18 @@ describe('result report model', () => {
     )
     expect(mcIncorrect?.correctChoiceNo).toBe(3)
     expect(mcIncorrect?.correctChoiceText).toBe('REQUIRES_NEW')
+
+    const mcCorrect = mockResultReport.results.find(
+      (r) => r.questionType === 'multiple_choice' && r.isCorrect,
+    )
+    expect(mcCorrect?.correctChoiceNo).toBeNull()
+    expect(mcCorrect?.correctChoiceText).toBeNull()
+
+    const codeBlankIncorrect = mockResultReport.results.find(
+      (r) => r.questionType === 'code_blank' && !r.isCorrect,
+    )
+    expect(codeBlankIncorrect?.correctChoiceNo).toBeNull()
+    expect(codeBlankIncorrect?.correctChoiceText).toBeNull()
 
     const shortAnswerIncorrect = mockResultReport.results.find(
       (r) => r.questionType === 'short_answer' && !r.isCorrect,

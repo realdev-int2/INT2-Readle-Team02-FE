@@ -194,7 +194,6 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
   const [logoutError, setLogoutError] = useState('')
   const profileLabel = member ? `${member.nickname} 프로필` : '프로필'
 
-
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     if (!params.has('authError')) {
@@ -228,7 +227,6 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
     returnFocusRef.current = event.currentTarget
     setLoginOpen(true)
   }
-
 
   const closeLogin = useCallback(() => {
     setLoginOpen(false)

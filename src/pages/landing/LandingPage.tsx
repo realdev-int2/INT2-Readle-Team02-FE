@@ -340,10 +340,10 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
                 AI ACTIVE LEARNING FOR DEVELOPERS
               </p>
               <h1 className="mt-7 text-[2.55rem] font-bold leading-[1.08] tracking-[-0.045em] sm:text-6xl lg:text-[4.25rem]">
-                <span className="block whitespace-nowrap">읽어본 기술 글을</span>
+                <span className="block sm:whitespace-nowrap">읽어본 기술 글을</span>
                 <span className="mt-2 block bg-linear-to-r from-brand-400 via-[#8AA8FF] to-[#A78BFA] bg-clip-text text-transparent">
-                  <span className="block whitespace-nowrap">설명할 수 있는</span>
-                  <span className="block whitespace-nowrap">지식으로.</span>
+                  <span className="block sm:whitespace-nowrap">설명할 수 있는</span>
+                  <span className="block sm:whitespace-nowrap">지식으로.</span>
                 </span>
               </h1>
               <p className="mx-auto mt-7 max-w-xl text-body leading-7 text-text-secondary sm:text-section sm:leading-8 lg:mx-0">

@@ -228,6 +228,14 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
     setLoginOpen(true)
   }
 
+  function handleStartLearning(event: MouseEvent<HTMLElement>) {
+    if (member) {
+      void navigate(ROUTES.home)
+    } else {
+      openLogin(event)
+    }
+  }
+
   const closeLogin = useCallback(() => {
     setLoginOpen(false)
 
@@ -335,7 +343,7 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
               <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
                 <button
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-control bg-linear-to-r from-brand-400 to-brand-600 px-6 text-label font-bold text-white shadow-button transition-all hover:-translate-y-0.5 hover:shadow-button-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-400"
-                  onClick={openLogin}
+                  onClick={handleStartLearning}
                   type="button"
                 >
                   학습 시작하기

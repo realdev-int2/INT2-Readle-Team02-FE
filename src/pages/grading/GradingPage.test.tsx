@@ -107,7 +107,7 @@ describe('GradingPage', () => {
     sessionStorageSpy.mockRestore()
   })
 
-  it('StrictMode 환경의 effect 재실행 시에도 제출은 1회만 발생한다', async () => {
+  it('StrictMode 환경의 effect 재실행 시에도 제출은 1회만 발생하고 최종 완료 상태에 도달한다', async () => {
     vi.useFakeTimers()
     vi.mocked(submitQuizAttempt).mockClear()
     
@@ -128,6 +128,7 @@ describe('GradingPage', () => {
         <MemoryRouter initialEntries={[{ pathname: '/quizzes/attempts/99/grading', state: { submitRequest: { answers: [] } } }]}>
           <Routes>
             <Route path="/quizzes/attempts/:attemptId/grading" element={<GradingPage />} />
+            <Route path="/result-reports/:reportId" element={<p>실제 결과 리포트</p>} />
           </Routes>
         </MemoryRouter>
       </StrictMode>
@@ -139,5 +140,11 @@ describe('GradingPage', () => {
 
     // React 18 StrictMode에서는 mount -> unmount -> mount 순으로 effect가 재실행되지만, API 호출은 1번만 일어남을 검증
     expect(submitQuizAttempt).toHaveBeenCalledTimes(1)
+    
+    // 타이머와 effect 재실행 흐름이 정상적으로 이어져서 최종 성공 화면(결과 리포트 보기 링크)까지 도달함을 단언
+    expect(screen.getByRole('link', { name: /결과 리포트 보기/ })).toHaveAttribute(
+      'href',
+      '/result-reports/701',
+    )
   })
 })

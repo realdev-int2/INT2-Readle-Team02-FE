@@ -340,14 +340,15 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
                 AI ACTIVE LEARNING FOR DEVELOPERS
               </p>
               <h1 className="mt-7 text-[2.55rem] font-bold leading-[1.08] tracking-[-0.045em] sm:text-6xl lg:text-[4.25rem]">
-                읽어본 기술 글을
+                <span className="block sm:whitespace-nowrap">읽어본 기술 글을</span>
                 <span className="mt-2 block bg-linear-to-r from-brand-400 via-[#8AA8FF] to-[#A78BFA] bg-clip-text text-transparent">
-                  설명할 수 있는 지식으로.
+                  <span className="block sm:whitespace-nowrap">설명할 수 있는</span>
+                  <span className="block sm:whitespace-nowrap">지식으로.</span>
                 </span>
               </h1>
               <p className="mx-auto mt-7 max-w-xl text-body leading-7 text-text-secondary sm:text-section sm:leading-8 lg:mx-0">
-                기술 아티클 URL이나 텍스트를 넣으면 AI가 핵심을 분석해 맞춤형 퀴즈를 만듭니다.
-                읽고 끝내지 말고, 풀고 피드백받으며 진짜 내 것으로 만드세요.
+                <span className="block">기술 아티클을 AI 맞춤형 퀴즈로 바꿔보세요.</span>
+                <span className="block">읽고, 풀고, 피드백받으며 진짜 내 것으로 만드세요.</span>
               </p>
               <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
                 <button

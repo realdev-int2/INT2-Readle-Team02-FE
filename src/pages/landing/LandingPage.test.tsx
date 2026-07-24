@@ -56,7 +56,8 @@ describe('LandingPage', () => {
   it('Readle의 핵심 가치와 학습 흐름을 소개한다', () => {
     const html = renderLanding()
 
-    expect(html).toContain('설명할 수 있는 지식으로.')
+    expect(html).toContain('설명할 수 있는')
+    expect(html).toContain('지식으로.')
     expect(html).toContain('readle analyze tech.dev/transaction')
     expect(html).toContain('QUIZ_READY')
     expect(html).toContain('Readle 데모입니다')
@@ -91,7 +92,7 @@ describe('LandingPage', () => {
     )
 
     expect(screen.getByTestId('learn-page')).toBeInTheDocument()
-    expect(container).not.toHaveTextContent('설명할 수 있는 지식으로.')
+    expect(container).not.toHaveTextContent('설명할 수 있는')
   })
 
   it('Google과 카카오 OAuth 시작 링크를 /learn returnTo로 표시한다', () => {

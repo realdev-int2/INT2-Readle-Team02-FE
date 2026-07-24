@@ -63,7 +63,8 @@ describe('AppRouter', () => {
   it('랜딩 경로에서 서비스 소개를 렌더링한다', () => {
     const html = renderRoute('/', null)
 
-    expect(html).toContain('설명할 수 있는 지식으로.')
+    expect(html).toContain('설명할 수 있는')
+    expect(html).toContain('지식으로.')
     expect(html).toContain('aria-label="랜딩 페이지 메뉴"')
     expect(html).not.toContain('aria-label="주요 메뉴"')
   })

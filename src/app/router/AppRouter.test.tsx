@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { AuthContext } from '@/app/providers/AuthContext'
 import { AppRouter } from '@/app/router/AppRouter'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { Member } from '@/shared/api'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -12,7 +13,10 @@ const queryClient = new QueryClient({
   },
 })
 
-function renderRoute(path: string) {
+function renderRoute(
+  path: string,
+  member: Member | null = { uuid: 'member-1', nickname: '테스트 사용자', profileImageUrl: null }
+) {
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
       <AuthContext.Provider
@@ -20,7 +24,7 @@ function renderRoute(path: string) {
           isLoading: false,
           invalidateAuth: () => {},
           logout: async () => {},
-          member: { uuid: 'member-1', nickname: '테스트 사용자', profileImageUrl: null },
+          member,
         }}
       >
         <MemoryRouter initialEntries={[path]}>
@@ -57,7 +61,7 @@ describe('AppRouter', () => {
   })
 
   it('랜딩 경로에서 서비스 소개를 렌더링한다', () => {
-    const html = renderRoute('/')
+    const html = renderRoute('/', null)
 
     expect(html).toContain('설명할 수 있는 지식으로.')
     expect(html).toContain('aria-label="랜딩 페이지 메뉴"')
@@ -65,7 +69,7 @@ describe('AppRouter', () => {
   })
 
   it('로그인 경로에서는 앱 헤더 없이 랜딩 위 로그인 모달을 표시한다', () => {
-    const html = renderRoute('/login')
+    const html = renderRoute('/login', null)
 
     expect(html).toContain('alt="Readle"')
     expect(html).toContain('role="dialog"')

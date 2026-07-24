@@ -74,10 +74,12 @@ export function LoginModal({ authError, onClose, open }: LoginModalProps) {
 
   const returnTo =
     typeof window === 'undefined'
-      ? ROUTES.landing
+      ? ROUTES.home
       : sanitizeReturnTo(
           new URLSearchParams(window.location.search).get('returnTo') ??
-            window.location.pathname + window.location.search,
+            (window.location.pathname === ROUTES.landing || window.location.pathname === ROUTES.login
+              ? ROUTES.home
+              : window.location.pathname + window.location.search),
         )
   const authErrorMessage = authError
     ? (authErrorMessages[authError] ?? authErrorMessages.oauth_failed)

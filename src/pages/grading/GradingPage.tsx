@@ -92,16 +92,13 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
   const progress = status === 'success' ? 100 : Math.round(((activeStage + 1) / gradingSteps.length) * 100)
   const resultPath = reportId ? generatePath(ROUTES.resultReport, { reportId: String(reportId) }) : ''
 
-  const submitFired = useRef(new Set<string>())
+  // StrictMode에서 마운트가 해제되었다가 다시 마운트되더라도, 
+  // 기존에 던진 API 요청을 공유하여 타이머 애니메이션이 끝까지 완주할 수 있도록 Promise를 캐싱합니다.
+  const requestPromiseRef = useRef<{ key: string; promise: Promise<{ reportId: number }> } | null>(null)
 
   useEffect(() => {
     let isMounted = true
-    
-    const key = `${attemptId}-${attemptNumber}`
-    // StrictMode 등에서 중복 실행되는 것을 방지
-    if (submitFired.current.has(key)) return
-    submitFired.current.add(key)
-    
+    const currentKey = `${attemptId}-${attemptNumber}`
     const timers: number[] = []
     const willFail = shouldFailFirstAttempt && attemptNumber === 0
 
@@ -117,26 +114,22 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
       })
 
       try {
-        let resultReportId: number
-        
-        if (submitRequest) {
-          // 정상 제출 흐름
-          const [result] = await Promise.all([
-            submitQuizAttempt(attemptId, submitRequest),
-            minDelay
-          ])
-          resultReportId = result.reportId
-        } else {
-          // 새로고침 시 복구 흐름 (답안이 없으므로 이미 제출된 결과를 조회)
-          const [result] = await Promise.all([
-            fetchQuizAttemptResult(attemptId),
-            minDelay
-          ])
-          resultReportId = result.reportId
+        if (requestPromiseRef.current?.key !== currentKey) {
+          requestPromiseRef.current = {
+            key: currentKey,
+            promise: submitRequest
+              ? submitQuizAttempt(attemptId, submitRequest)
+              : fetchQuizAttemptResult(attemptId)
+          }
         }
         
+        const [result] = await Promise.all([
+          requestPromiseRef.current.promise,
+          minDelay
+        ])
+        
         if (!isMounted) return
-        setReportId(resultReportId)
+        setReportId(result.reportId)
         setActiveStage(gradingSteps.length - 1)
         setStatus('success')
       } catch (error: unknown) {
@@ -182,7 +175,6 @@ function GradingFlow({ attemptId }: GradingFlowProps) {
 
     return () => {
       isMounted = false
-      submitFired.current.delete(key)
       timers.forEach((timer) => window.clearTimeout(timer))
     }
   }, [attemptId, attemptNumber, submitRequest, navigate, shouldFailFirstAttempt])

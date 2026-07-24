@@ -26,4 +26,15 @@ describe('AppHeader', () => {
     expect(html).toContain('aria-label="테스트 사용자 프로필"')
     expect(html).toContain('src="https://readle.local/profile.png"')
   })
+
+  it('로그인한 회원에게는 헤더 프로필과 로그아웃을 표시한다', () => {
+    const html = renderHeader({
+      uuid: 'member-1',
+      nickname: '테스트 사용자',
+      profileImageUrl: null,
+    })
+
+    expect(html).toContain('aria-label="테스트 사용자 프로필"')
+    expect(html).toContain('>로그아웃</button>')
+  })
 })

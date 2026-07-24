@@ -1,5 +1,8 @@
+// @vitest-environment jsdom
+import '@testing-library/jest-dom/vitest'
+import { render, screen, cleanup } from '@testing-library/react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext } from '@/app/providers/AuthContext'
 import { LandingPage } from '@/pages/landing/LandingPage'
@@ -46,6 +49,7 @@ function expectOAuthReturnTo(html: string, returnTo: string) {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  cleanup()
 })
 
 describe('LandingPage', () => {
@@ -69,33 +73,41 @@ describe('LandingPage', () => {
     expect(html).not.toContain('role="dialog"')
   })
 
-  it('로그인한 회원에게는 헤더 프로필과 로그아웃을 표시한다', () => {
-    const html = renderLanding(false, {}, { uuid: 'member-1', nickname: '테스트 사용자', profileImageUrl: null })
 
-    expect(html).toContain('aria-label="테스트 사용자 프로필"')
-    expect(html).toContain('>로그아웃</button>')
-    expect(html).not.toContain('>로그인</button>')
+  it('로그인한 회원인 경우 랜딩 페이지를 렌더링하지 않고 즉시 홈으로 리다이렉트(Navigate)한다', () => {
+    const member: Member = { uuid: 'member-1', nickname: '테스트 사용자', profileImageUrl: null }
+    const testLocation: TestLocation = { hash: '', href: 'https://readle.local/', origin: 'https://readle.local', pathname: '/', search: '' }
+    vi.stubGlobal('window', { location: testLocation })
+
+    const { container } = render(
+      <AuthContext.Provider value={{ member, isLoading: false, invalidateAuth: () => {}, logout: async () => {} }}>
+        <MemoryRouter initialEntries={['/']}>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/learn" element={<div data-testid="learn-page">Learn Page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
+    )
+
+    expect(screen.getByTestId('learn-page')).toBeInTheDocument()
+    expect(container).not.toHaveTextContent('설명할 수 있는 지식으로.')
   })
 
-  it('프로필 이미지 URL을 프로필 아바타에 전달한다', () => {
-    const html = renderLanding(false, {}, {
-      uuid: 'member-1',
-      nickname: '테스트 사용자',
-      profileImageUrl: 'https://readle.local/profile.png',
-    })
-
-    expect(html).toContain('aria-label="테스트 사용자 프로필"')
-    expect(html).toContain('src="https://readle.local/profile.png"')
-  })
-
-  it('Google과 카카오 OAuth 시작 링크를 root returnTo로 표시한다', () => {
+  it('Google과 카카오 OAuth 시작 링크를 /learn returnTo로 표시한다', () => {
     const html = renderLanding(true)
 
     expect(html).toContain('role="dialog"')
     expect(html).toContain('다시 만나 반갑습니다')
-    expectOAuthReturnTo(html, '/')
+    expectOAuthReturnTo(html, '/learn')
     expect(html).not.toContain('Google 로그인 연동은 준비 중입니다.')
     expect(html).not.toContain('카카오 로그인 연동은 준비 중입니다.')
+  })
+
+  it('/login 경로에서 열린 모달에서도 Google과 카카오 OAuth 시작 링크를 /learn returnTo로 표시한다', () => {
+    const html = renderLanding(true, { pathname: '/login' })
+
+    expectOAuthReturnTo(html, '/learn')
   })
 
   it('현재 경로와 query만 OAuth returnTo로 인코딩한다', () => {

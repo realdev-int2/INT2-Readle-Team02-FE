@@ -7,6 +7,8 @@ export interface ResultReportTag {
 
 export interface QuestionResult {
   aiFeedback: string | null
+  correctChoiceNo?: number | null
+  correctChoiceText?: string | null
   isCorrect: boolean
   orderNo: number
   questionId: number
@@ -49,6 +51,8 @@ export const mockResultReport: ResultReport = {
       submittedAnswer: '트랜잭션을 롤백하고 예외를 다시 던진다.',
       isCorrect: true,
       aiFeedback: null,
+      correctChoiceNo: 2,
+      correctChoiceText: '트랜잭션을 롤백하고 예외를 다시 던진다.',
     },
     {
       questionId: 302,
@@ -58,15 +62,19 @@ export const mockResultReport: ResultReport = {
       submittedAnswer: '같은 객체 안에서 호출하면 새로운 트랜잭션이 만들어지지 않기 때문입니다.',
       isCorrect: false,
       aiFeedback: '핵심은 새로운 트랜잭션의 생성 여부가 아니라 프록시를 거치지 않는다는 점입니다. Spring AOP가 트랜잭션을 적용하는 호출 경로를 다시 확인해 보세요.',
+      correctChoiceNo: null,
+      correctChoiceText: null,
     },
     {
       questionId: 303,
       orderNo: 3,
       questionType: 'multiple_choice',
       questionText: '기존 트랜잭션의 존재 여부와 관계없이 항상 새로운 트랜잭션을 시작하는 전파 속성은 무엇인가요?',
-      submittedAnswer: 'REQUIRES_NEW',
-      isCorrect: true,
+      submittedAnswer: 'REQUIRED',
+      isCorrect: false,
       aiFeedback: null,
+      correctChoiceNo: 3,
+      correctChoiceText: 'REQUIRES_NEW',
     },
     {
       questionId: 304,
@@ -76,6 +84,8 @@ export const mockResultReport: ResultReport = {
       submittedAnswer: 'readonly',
       isCorrect: false,
       aiFeedback: '속성 이름은 대소문자를 구분합니다. Spring의 @Transactional에서 읽기 전용 여부를 지정하는 camelCase 속성명을 확인해 보세요.',
+      correctChoiceNo: null,
+      correctChoiceText: null,
     },
     {
       questionId: 305,
@@ -85,6 +95,8 @@ export const mockResultReport: ResultReport = {
       submittedAnswer: '여러 저장소 작업을 하나의 비즈니스 작업 단위로 묶어 일관성을 보장하기 위해서입니다.',
       isCorrect: true,
       aiFeedback: null,
+      correctChoiceNo: null,
+      correctChoiceText: null,
     },
   ],
 }

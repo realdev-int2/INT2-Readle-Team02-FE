@@ -34,6 +34,16 @@ function QuestionResultItem({ result }: { result: QuestionResult }) {
             : <p>{result.submittedAnswer}</p>}
         </section>
 
+        {!result.isCorrect && result.questionType === 'multiple_choice' && result.correctChoiceText && (
+          <section aria-labelledby={`correct-choice-title-${result.questionId}`} className="result-correct-panel">
+            <h3 id={`correct-choice-title-${result.questionId}`}>정답 선택지</h3>
+            <p>
+              {result.correctChoiceNo ? `${result.correctChoiceNo}번. ` : ''}
+              {result.correctChoiceText}
+            </p>
+          </section>
+        )}
+
         {!result.isCorrect && result.aiFeedback && (
           <section aria-labelledby={`feedback-title-${result.questionId}`} className="result-feedback-panel">
             <div className="result-feedback-heading">

@@ -73,14 +73,30 @@ describe('ResultReportPage', () => {
     renderPage('unknown-error')
     expect(await screen.findByText('일시적인 오류가 발생했습니다')).toBeInTheDocument()
   })
+
+  it('객관식 문항 오답 시 정답 선택지(번호 및 내용)를 렌더링한다', async () => {
+    vi.mocked(getResultReportDetail).mockResolvedValueOnce(mockResultReport)
+    renderPage()
+
+    expect(await screen.findByText('Spring @Transactional 심층 이해')).toBeInTheDocument()
+    expect(screen.getByText('정답 선택지')).toBeInTheDocument()
+    expect(screen.getByText(/3번\. REQUIRES_NEW/)).toBeInTheDocument()
+  })
 })
 
 describe('result report model', () => {
-  it('API 계약에 맞게 정답에는 피드백이 없고 오답에만 피드백이 있다', () => {
-    expect(mockResultReport.results.filter((result) => result.isCorrect))
-      .toEqual(expect.arrayContaining([expect.objectContaining({ aiFeedback: null })]))
-    expect(mockResultReport.results.filter((result) => !result.isCorrect).every((result) => Boolean(result.aiFeedback)))
-      .toBe(true)
+  it('API 계약에 맞게 객관식 오답 문항에만 정답 선택지가 제공된다', () => {
+    const mcIncorrect = mockResultReport.results.find(
+      (r) => r.questionType === 'multiple_choice' && !r.isCorrect,
+    )
+    expect(mcIncorrect?.correctChoiceNo).toBe(3)
+    expect(mcIncorrect?.correctChoiceText).toBe('REQUIRES_NEW')
+
+    const shortAnswerIncorrect = mockResultReport.results.find(
+      (r) => r.questionType === 'short_answer' && !r.isCorrect,
+    )
+    expect(shortAnswerIncorrect?.correctChoiceNo).toBeNull()
+    expect(shortAnswerIncorrect?.correctChoiceText).toBeNull()
   })
 
   it('풀이 시간을 분과 초로 표시한다', () => {

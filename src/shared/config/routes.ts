@@ -5,7 +5,7 @@ export const ROUTES = {
   contentPreview: '/contents/preview',
   learningPreparation: '/contents/:contentId/preparing',
   quiz: '/quizzes/:quizId',
-  grading: '/result-reports/:reportId/preparing',
+  grading: '/quizzes/attempts/:attemptId/grading',
   resultReport: '/result-reports/:reportId',
   dashboard: '/dashboard',
   history: '/history',

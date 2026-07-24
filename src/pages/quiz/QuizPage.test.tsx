@@ -1,7 +1,11 @@
-import { renderToStaticMarkup } from 'react-dom/server'
+// @vitest-environment jsdom
+import '@testing-library/jest-dom/vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { QuizPage } from '@/pages/quiz/QuizPage'
+import { fetchQuizAttemptDetail, startQuizAttempt } from '@/pages/quiz/api/quiz'
 import {
   getAnsweredCount,
   getFirstUnansweredIndex,
@@ -9,47 +13,99 @@ import {
 } from '@/pages/quiz/model/quiz'
 import { mockQuiz } from '@/pages/quiz/model/quiz'
 
-// QuizPage는 API를 호출하므로, 초기 렌더(loading 상태)를 기준으로 테스트합니다.
-// 실제 API 연동 통합 테스트는 MSW 핸들러(quiz.ts)를 통해 별도로 작성합니다.
+vi.mock('@/pages/quiz/api/quiz')
 
 function renderQuizPage(quizId = '1') {
-  return renderToStaticMarkup(
+  return render(
     <MemoryRouter initialEntries={[`/quizzes/${quizId}`]}>
       <Routes>
         <Route path="/quizzes/:quizId" element={<QuizPage />} />
+        <Route path="/quizzes/attempts/:attemptId/grading" element={<p>채점 중...</p>} />
       </Routes>
     </MemoryRouter>,
   )
 }
 
 describe('QuizPage', () => {
-  it('API 로딩 중에는 스켈레톤 로딩 화면을 렌더링한다', () => {
-    const html = renderQuizPage()
-
-    // 로딩 상태 — 스켈레톤 UI 요소가 있어야 함
-    expect(html).toContain('quiz-page--loading')
-    expect(html).toContain('quiz-skeleton-title')
-    // mockQuiz 더미 데이터가 더 이상 노출되지 않아야 함
-    expect(html).not.toContain('Spring @Transactional 심층 이해')
-    // API 경로가 HTML에 노출되지 않아야 함
-    expect(html).not.toContain('/api/')
-    // 정답이 노출되지 않아야 함
-    expect(html).not.toContain('correct_answer')
+  afterEach(() => {
+    vi.clearAllMocks()
+    cleanup()
   })
 
-  it('접근성: 로딩 중 aria-live polite 영역과 스크린 리더용 텍스트가 존재한다', () => {
-    const html = renderQuizPage()
+  it('API 로딩 중에는 스켈레톤 로딩 화면을 렌더링한다', () => {
+    // API 프로미스를 pending 상태로 두어 로딩 렌더링 검증
+    vi.mocked(startQuizAttempt).mockReturnValue(new Promise(() => {}))
+    renderQuizPage()
 
-    expect(html).toContain('aria-live="polite"')
-    expect(html).toContain('퀴즈를 불러오는 중입니다')
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByText('퀴즈를 불러오는 중입니다…')).toBeInTheDocument()
   })
 
   it('유효하지 않은 quizId(문자열)면 에러 화면을 즉시 렌더링한다', () => {
-    const html = renderQuizPage('abc')
+    renderQuizPage('abc')
 
-    expect(html).toContain('잘못된 퀴즈 접근입니다')
-    expect(html).toContain('quiz-page--error')
-    expect(html).not.toContain('quiz-page--loading')
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByText('잘못된 퀴즈 접근입니다')).toBeInTheDocument()
+  })
+
+  it('퀴즈 문제를 모두 풀고 제출하면 결과 준비(Grading) 화면으로 라우팅된다', async () => {
+    const user = userEvent.setup()
+    vi.mocked(startQuizAttempt).mockResolvedValue({
+      attemptId: 99,
+      quizId: 1,
+      status: 'in_progress',
+      startedAt: new Date().toISOString(),
+    })
+    
+    // 객관식 1개, 단답형 1개로만 간소화된 응답 모킹
+    vi.mocked(fetchQuizAttemptDetail).mockResolvedValue({
+      attemptId: 99,
+      quizSetId: 1,
+      status: 'in_progress',
+      questions: [
+        {
+          questionId: 301,
+          type: 'multiple_choice',
+          orderNo: 1,
+          questionText: 'Test MCQ',
+          codeSnippet: null,
+          choices: [
+            { choiceId: 401, orderNo: 1, choiceText: 'Choice 1' },
+            { choiceId: 402, orderNo: 2, choiceText: 'Choice 2' }
+          ]
+        },
+        {
+          questionId: 302,
+          type: 'short_answer',
+          orderNo: 2,
+          questionText: 'Test Short Answer',
+          codeSnippet: null,
+          choices: null
+        }
+      ]
+    })
+
+
+    renderQuizPage()
+
+    // 1번 문제 (객관식) 풀이
+    const choice = await screen.findByText('Choice 1')
+    await user.click(choice)
+    await user.click(screen.getByRole('button', { name: /다음 문제/ }))
+
+    // 2번 문제 (주관식) 풀이
+    const input = await screen.findByPlaceholderText(/답변해 주세요/)
+    await user.type(input, 'Test Answer')
+    
+    // 제출
+    await user.click(screen.getByRole('button', { name: /제출하기/ }))
+    
+    // 모달 확인
+    const confirmButton = await screen.findByRole('button', { name: '제출하기' })
+    await user.click(confirmButton)
+
+    // attemptId 99에 해당하는 채점 화면(grading)으로 이동했는지 검증
+    expect(await screen.findByText('채점 중...')).toBeInTheDocument()
   })
 })
 

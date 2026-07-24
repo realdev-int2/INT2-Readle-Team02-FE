@@ -1,7 +1,10 @@
-import { useEffect, useState, type CSSProperties } from 'react'
-import { generatePath, Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useEffect, useState, useRef, type CSSProperties } from 'react'
+import { generatePath, Link, useNavigate, useParams, useSearchParams, useLocation } from 'react-router'
 import { ROUTES } from '@/shared/config/routes'
 import { Button } from '@/shared/ui'
+import { submitQuizAttempt, fetchQuizAttemptResult } from '@/pages/quiz/api/quiz'
+import type { QuizSubmitRequest } from '@/pages/quiz/api/types'
+import { ApiError } from '@/shared/api/error'
 import '@/pages/grading/GradingPage.css'
 
 type GradingStatus = 'running' | 'success' | 'error'
@@ -15,54 +18,186 @@ const gradingSteps = [
 ] as const
 
 interface GradingFlowProps {
-  reportId: string
+  attemptId: number
+}
+
+function isValidSubmitRequest(data: unknown): data is QuizSubmitRequest {
+  if (!data || typeof data !== 'object') return false
+  const req = data as Record<string, unknown>
+  if (!Array.isArray(req.answers)) return false
+
+  return req.answers.every((ans: unknown) => {
+    if (!ans || typeof ans !== 'object') return false
+    const answer = ans as Record<string, unknown>
+    
+    if (typeof answer.questionId !== 'number') return false
+    if (answer.submittedChoiceId !== undefined && typeof answer.submittedChoiceId !== 'number') return false
+    if (answer.submittedAnswerText !== undefined && typeof answer.submittedAnswerText !== 'string') return false
+    
+    return true
+  })
 }
 
 export function GradingPage() {
-  const { reportId = '' } = useParams<{ reportId: string }>()
+  const { attemptId = '' } = useParams<{ attemptId: string }>()
+  const parsedAttemptId = Number(attemptId)
 
-  return <GradingFlow key={reportId} reportId={reportId} />
+  if (!Number.isFinite(parsedAttemptId) || parsedAttemptId <= 0) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center py-8 sm:py-10 lg:py-12" role="alert">
+        <div className="flex max-w-[26rem] flex-col items-center gap-4 rounded-2xl border border-rose-400/20 bg-rose-950/40 px-8 py-10 text-center">
+          <span className="text-3xl text-rose-500" aria-hidden="true">⚠</span>
+          <h1 className="m-0 text-xl font-bold text-white">잘못된 접근입니다</h1>
+          <p className="m-0 text-sm leading-relaxed text-slate-300">올바른 경로로 다시 접속해 주세요.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return <GradingFlow key={parsedAttemptId} attemptId={parsedAttemptId} />
 }
 
-function GradingFlow({ reportId }: GradingFlowProps) {
+function GradingFlow({ attemptId }: GradingFlowProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const [activeStage, setActiveStage] = useState(0)
   const [attemptNumber, setAttemptNumber] = useState(0)
   const [status, setStatus] = useState<GradingStatus>('running')
 
+  const [reportId, setReportId] = useState<number>()
+  
+  const [submitRequest] = useState<QuizSubmitRequest | undefined>(() => {
+    if (isValidSubmitRequest(location.state?.submitRequest)) {
+      return location.state.submitRequest
+    }
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        const stored = window.sessionStorage.getItem(`quiz_submit_${attemptId}`)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (isValidSubmitRequest(parsed)) {
+            return parsed
+          }
+        }
+      }
+    } catch {
+      // ignore parse error or SecurityError
+    }
+    return undefined
+  })
+
   const shouldFailFirstAttempt =
     import.meta.env.DEV && searchParams.get('mock') === 'failed'
   const progress = status === 'success' ? 100 : Math.round(((activeStage + 1) / gradingSteps.length) * 100)
-  const resultPath = generatePath(ROUTES.resultReport, { reportId })
+  const resultPath = reportId ? generatePath(ROUTES.resultReport, { reportId: String(reportId) }) : ''
+
+  const submitFired = useRef(new Set<string>())
 
   useEffect(() => {
+    let isMounted = true
+    
+    const key = `${attemptId}-${attemptNumber}`
+    // StrictMode 등에서 중복 실행되는 것을 방지
+    if (submitFired.current.has(key)) return
+    submitFired.current.add(key)
+    
     const timers: number[] = []
     const willFail = shouldFailFirstAttempt && attemptNumber === 0
 
     gradingSteps.slice(1, willFail ? 3 : undefined).forEach((_, index) => {
-      timers.push(window.setTimeout(() => setActiveStage(index + 1), 800 * (index + 1)))
+      timers.push(window.setTimeout(() => {
+        if (isMounted) setActiveStage(index + 1)
+      }, 800 * (index + 1)))
     })
 
-    timers.push(
-      window.setTimeout(
-        () => setStatus(willFail ? 'error' : 'success'),
-        willFail ? 2400 : 4000,
-      ),
-    )
+    async function runFlow() {
+      const minDelay = new Promise((resolve) => {
+        timers.push(window.setTimeout(resolve, 3000))
+      })
 
-    return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [attemptNumber, reportId, shouldFailFirstAttempt])
+      try {
+        let resultReportId: number
+        
+        if (submitRequest) {
+          // 정상 제출 흐름
+          const [result] = await Promise.all([
+            submitQuizAttempt(attemptId, submitRequest),
+            minDelay
+          ])
+          resultReportId = result.reportId
+        } else {
+          // 새로고침 시 복구 흐름 (답안이 없으므로 이미 제출된 결과를 조회)
+          const [result] = await Promise.all([
+            fetchQuizAttemptResult(attemptId),
+            minDelay
+          ])
+          resultReportId = result.reportId
+        }
+        
+        if (!isMounted) return
+        setReportId(resultReportId)
+        setActiveStage(gradingSteps.length - 1)
+        setStatus('success')
+      } catch (error: unknown) {
+        if (!isMounted) return
+        
+        if (error instanceof ApiError) {
+          // 중복 제출 에러(이미 처리됨) 시 결과 다시 조회 시도
+          if (submitRequest && (error.status === 409 || error.code === 'ATTEMPT_ALREADY_SUBMITTED')) {
+            try {
+              const fallbackResult = await fetchQuizAttemptResult(attemptId)
+              if (!isMounted) return
+              setReportId(fallbackResult.reportId)
+              setActiveStage(gradingSteps.length - 1)
+              setStatus('success')
+              return
+            } catch {
+              if (!isMounted) return
+              setStatus('error')
+              return
+            }
+          }
+          
+          // 데이터가 없거나 권한이 없는 등 영구적 오류 접근 시 홈으로 리다이렉트
+          if (!submitRequest && (error.status === 404 || error.status === 403 || error.status === 401)) {
+            navigate(ROUTES.home, { replace: true })
+            return
+          }
+        }
+        
+        setStatus('error')
+      }
+    }
+
+    if (willFail) {
+      timers.push(
+        window.setTimeout(() => {
+          if (isMounted) setStatus('error')
+        }, 2400)
+      )
+    } else {
+      void runFlow()
+    }
+
+    return () => {
+      isMounted = false
+      submitFired.current.delete(key)
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [attemptId, attemptNumber, submitRequest, navigate, shouldFailFirstAttempt])
 
   useEffect(() => {
-    if (status !== 'success') return
-
-    const timer = window.setTimeout(() => {
-      void navigate(resultPath, { replace: true })
-    }, 600)
-
-    return () => window.clearTimeout(timer)
-  }, [navigate, resultPath, status])
+    if (status === 'success') {
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          window.sessionStorage.removeItem(`quiz_submit_${attemptId}`)
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }, [status, attemptId])
 
   function retryGrading() {
     setActiveStage(0)

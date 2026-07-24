@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { useAuth } from '@/app/providers/AuthContext'
 import readleSymbolUrl from '@/shared/assets/readle-symbol.png'
 import readleWordmarkUrl from '@/shared/assets/readle-wordmark.png'
@@ -186,13 +186,14 @@ function ProductPreview() {
 export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { consumeSessionExpired, member, logout } = useAuth()
+  const { consumeSessionExpired, member, logout, isLoading } = useAuth()
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const [loginOpen, setLoginOpen] = useState(initialLoginOpen)
   const [authError, setAuthError] = useState(() => new URLSearchParams(location.search).get('authError'))
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
   const profileLabel = member ? `${member.nickname} 프로필` : '프로필'
+
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -261,6 +262,14 @@ export function LandingPage({ initialLoginOpen = false }: LandingPageProps) {
     } finally {
       setIsLoggingOut(false)
     }
+  }
+
+  if (isLoading) {
+    return null
+  }
+
+  if (member && !isLoggingOut) {
+    return <Navigate replace to={ROUTES.home} />
   }
 
   return (

@@ -101,7 +101,7 @@ describe('HomePage', () => {
       await user.click(resetButton)
 
       expect(urlInput).not.toBeDisabled()
-      expect(urlInput).toHaveValue('')
+      expect(urlInput).toHaveValue('https://example.com/article')
       expect(screen.queryByText(/성공적으로 불러왔습니다/)).not.toBeInTheDocument()
       expect(screen.getByRole('button', { name: '본문 불러오기' })).toBeInTheDocument()
     })

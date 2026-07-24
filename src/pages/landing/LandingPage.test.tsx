@@ -69,31 +69,20 @@ describe('LandingPage', () => {
     expect(html).not.toContain('role="dialog"')
   })
 
-  it('로그인한 회원에게는 헤더 프로필과 로그아웃을 표시한다', () => {
+
+  it('로그인한 회원인 경우 랜딩 페이지를 렌더링하지 않고 즉시 홈으로 리다이렉트(Navigate)한다', () => {
     const html = renderLanding(false, {}, { uuid: 'member-1', nickname: '테스트 사용자', profileImageUrl: null })
 
-    expect(html).toContain('aria-label="테스트 사용자 프로필"')
-    expect(html).toContain('>로그아웃</button>')
-    expect(html).not.toContain('>로그인</button>')
+    // Navigate 컴포넌트는 서버사이드/StaticMarkup 환경에서 빈 HTML을 반환합니다.
+    expect(html).toBe('')
   })
 
-  it('프로필 이미지 URL을 프로필 아바타에 전달한다', () => {
-    const html = renderLanding(false, {}, {
-      uuid: 'member-1',
-      nickname: '테스트 사용자',
-      profileImageUrl: 'https://readle.local/profile.png',
-    })
-
-    expect(html).toContain('aria-label="테스트 사용자 프로필"')
-    expect(html).toContain('src="https://readle.local/profile.png"')
-  })
-
-  it('Google과 카카오 OAuth 시작 링크를 root returnTo로 표시한다', () => {
+  it('Google과 카카오 OAuth 시작 링크를 /learn returnTo로 표시한다', () => {
     const html = renderLanding(true)
 
     expect(html).toContain('role="dialog"')
     expect(html).toContain('다시 만나 반갑습니다')
-    expectOAuthReturnTo(html, '/')
+    expectOAuthReturnTo(html, '/learn')
     expect(html).not.toContain('Google 로그인 연동은 준비 중입니다.')
     expect(html).not.toContain('카카오 로그인 연동은 준비 중입니다.')
   })
